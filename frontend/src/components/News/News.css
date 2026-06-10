@@ -1,0 +1,165 @@
+.container {
+    padding: 20px;
+    background: #f5f5f5;
+    min-height: 100vh;
+}
+
+.container.loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    color: #666;
+}
+
+.header {
+    margin-bottom: 20px;
+}
+
+.header h1 {
+    margin: 0 0 5px 0;
+    color: #333;
+    font-size: 32px;
+}
+
+.header p {
+    margin: 0;
+    color: #666;
+    font-size: 14px;
+}
+
+.news-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: white;
+    border-radius: 12px;
+    padding: 15px 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.news-info {
+    font-size: 14px;
+    color: #666;
+}
+
+.action-button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.action-button-primary {
+    background: #4CAF50;
+    color: white;
+}
+
+.action-button-primary:hover:not(:disabled) {
+    background: #45a049;
+}
+
+.action-button:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+}
+
+.news-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.news-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.news-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.news-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.news-source {
+    display: inline-block;
+    padding: 4px 12px;
+    background: #2196F3;
+    color: white;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.news-time {
+    font-size: 12px;
+    color: #999;
+}
+
+.news-title {
+    margin: 0 0 12px 0;
+    font-size: 18px;
+    color: #333;
+    font-weight: 700;
+    line-height: 1.4;
+}
+
+.news-description {
+    margin: 0 0 15px 0;
+    color: #666;
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.news-link {
+    display: inline-flex;
+    align-items: center;
+    color: #2196F3;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 600;
+    transition: color 0.3s;
+}
+
+.news-link:hover {
+    color: #1976D2;
+}
+
+.news-footer {
+    background: white;
+    border-radius: 12px;
+    padding: 15px 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.news-disclaimer {
+    margin: 0;
+    font-size: 13px;
+    color: #666;
+    text-align: center;
+    line-height: 1.5;
+}
+
+.card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Made with Bob */
