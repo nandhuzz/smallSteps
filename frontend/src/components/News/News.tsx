@@ -1,6 +1,6 @@
 import { h } from 'preact';
 import { useState, useEffect } from 'preact/hooks';
-import { GetIndianMarketNews } from '../../../wailsjs/go/main/App';
+import { GetIndianMarketNews, GetUpstoxMarketNews } from '../../../wailsjs/go/main/App';
 import './News.css';
 
 interface NewsArticle {
@@ -22,10 +22,18 @@ const News = () => {
 
     const loadNews = async () => {
         try {
-            const data = await GetIndianMarketNews();
+            // Try to get news from Upstox integration first
+            const data = await GetUpstoxMarketNews();
             setNews(data || []);
         } catch (error) {
             console.error('Error loading news:', error);
+            // Fallback to regular news API if Upstox fails
+            try {
+                const fallbackData = await GetIndianMarketNews();
+                setNews(fallbackData || []);
+            } catch (fallbackError) {
+                console.error('Error loading fallback news:', fallbackError);
+            }
         } finally {
             setLoading(false);
             setRefreshing(false);

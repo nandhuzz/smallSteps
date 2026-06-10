@@ -22,6 +22,47 @@ func (d *Database) CreateTrade(trade *Trade) error {
 	return nil
 }
 
+func (d *Database) UpdateTrade(trade *Trade) error {
+	query := `UPDATE trades SET symbol = ?, trade_type = ?, instrument_type = ?, option_type = ?,
+			  strike_price = ?, expiry_date = ?, quantity = ?, entry_price = ?, brokerage = ?,
+			  other_charges = ?, notes = ?, emotion_before = ? WHERE id = ?`
+	_, err := d.DB.Exec(query, trade.Symbol, trade.TradeType, trade.InstrumentType, trade.OptionType,
+		trade.StrikePrice, trade.ExpiryDate, trade.Quantity, trade.EntryPrice, trade.Brokerage,
+		trade.OtherCharges, trade.Notes, trade.EmotionBefore, trade.ID)
+	if err != nil {
+		return err
+	}
+	d.LogMessage("TRADE", fmt.Sprintf("Trade updated: ID %d, %s %s", trade.ID, trade.TradeType, trade.Symbol), "")
+	return nil
+}
+
+func (d *Database) DeleteTrade(tradeID int) error {
+	tx, err := d.DB.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	// Remove from goal contributions if exists
+	_, err = tx.Exec(`DELETE FROM goal_contributions WHERE trade_id = ?`, tradeID)
+	if err != nil {
+		return err
+	}
+
+	// Delete trade
+	_, err = tx.Exec(`DELETE FROM trades WHERE id = ?`, tradeID)
+	if err != nil {
+		return err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+
+	d.LogMessage("TRADE", fmt.Sprintf("Trade deleted: ID %d", tradeID), "")
+	return nil
+}
+
 func (d *Database) CloseTrade(tradeID int, exitPrice float64, emotionAfter string) error {
 	// Get trade details
 	var trade Trade
@@ -278,7 +319,7 @@ func (d *Database) CreateGoal(goal *Goal) error {
 }
 
 func (d *Database) GetGoals() ([]Goal, error) {
-	query := `SELECT id, title, target_amount, current_amount, deadline, status, created_at 
+	query := `SELECT id, title, target_amount, current_amount, deadline, status, created_at
 			  FROM goals WHERE status = 'ACTIVE' ORDER BY created_at DESC`
 	
 	rows, err := d.DB.Query(query)
@@ -304,6 +345,34 @@ func (d *Database) GetGoals() ([]Goal, error) {
 	return goals, nil
 }
 
+func (d *Database) UpdateGoal(goal *Goal) error {
+	query := `UPDATE goals SET title = ?, target_amount = ?, deadline = ? WHERE id = ?`
+	_, err := d.DB.Exec(query, goal.Title, goal.TargetAmount, goal.Deadline, goal.ID)
+	return err
+}
+
+func (d *Database) DeleteGoal(goalID int) error {
+	tx, err := d.DB.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	// Delete goal contributions first
+	_, err = tx.Exec(`DELETE FROM goal_contributions WHERE goal_id = ?`, goalID)
+	if err != nil {
+		return err
+	}
+
+	// Delete goal
+	_, err = tx.Exec(`DELETE FROM goals WHERE id = ?`, goalID)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}
+
 func (d *Database) ContributeToGoal(goalID, tradeID int, amount float64) error {
 	tx, err := d.DB.Begin()
 	if err != nil {
@@ -326,6 +395,52 @@ func (d *Database) ContributeToGoal(goalID, tradeID int, amount float64) error {
 
 	return tx.Commit()
 }
+// Get Daily P&L Data for graphs
+func (d *Database) GetDailyPLData(days int) ([]map[string]interface{}, error) {
+	query := `
+		SELECT DATE(date) as trade_date, 
+			   COUNT(*) as trade_count,
+			   SUM(CASE WHEN profit_loss > 0 THEN profit_loss ELSE 0 END) as profit,
+			   SUM(CASE WHEN profit_loss < 0 THEN profit_loss ELSE 0 END) as loss,
+			   SUM(COALESCE(profit_loss, 0)) as net_pl,
+			   SUM(brokerage + other_charges) as total_charges
+		FROM trades 
+		WHERE date >= DATE('now', '-' || ? || ' days')
+		AND status = 'CLOSED'
+		GROUP BY DATE(date)
+		ORDER BY DATE(date) ASC
+	`
+	
+	rows, err := d.DB.Query(query, days)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var data []map[string]interface{}
+	for rows.Next() {
+		var tradeDate string
+		var tradeCount int
+		var profit, loss, netPL, totalCharges float64
+		
+		err := rows.Scan(&tradeDate, &tradeCount, &profit, &loss, &netPL, &totalCharges)
+		if err != nil {
+			return nil, err
+		}
+		
+		data = append(data, map[string]interface{}{
+			"date":          tradeDate,
+			"trade_count":   tradeCount,
+			"profit":        profit,
+			"loss":          loss,
+			"net_pl":        netPL,
+			"total_charges": totalCharges,
+		})
+	}
+	
+	return data, nil
+}
+
 
 // Trading Statistics
 func (d *Database) GetTradingStats(startDate, endDate string) (map[string]interface{}, error) {

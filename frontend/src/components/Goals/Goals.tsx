@@ -1,6 +1,6 @@
 import { h } from 'preact';
 import { useState, useEffect } from 'preact/hooks';
-import { CreateGoal, GetGoals, ContributeToGoal, GetTrades } from '../../../wailsjs/go/main/App';
+import { CreateGoal, GetGoals, UpdateGoal, DeleteGoal, ContributeToGoal, GetTrades } from '../../../wailsjs/go/main/App';
 import './Goals.css';
 
 interface Goal {
@@ -26,9 +26,16 @@ const Goals = () => {
     const [trades, setTrades] = useState<Trade[]>([]);
     const [loading, setLoading] = useState(true);
     const [showAddModal, setShowAddModal] = useState(false);
+    const [showEditModal, setShowEditModal] = useState(false);
     const [showContributeModal, setShowContributeModal] = useState(false);
     const [selectedGoal, setSelectedGoal] = useState<Goal | null>(null);
     const [newGoal, setNewGoal] = useState({
+        title: '',
+        targetAmount: 0,
+        deadline: ''
+    });
+    const [editGoal, setEditGoal] = useState({
+        id: 0,
         title: '',
         targetAmount: 0,
         deadline: ''
@@ -77,6 +84,47 @@ const Goals = () => {
             await loadData();
         } catch (error) {
             alert('Error creating goal: ' + error);
+        }
+    };
+
+    const handleEditGoal = (goal: Goal) => {
+        setEditGoal({
+            id: goal.id,
+            title: goal.title,
+            targetAmount: goal.target_amount,
+            deadline: goal.deadline || ''
+        });
+        setShowEditModal(true);
+    };
+
+    const submitEditGoal = async (e: Event) => {
+        e.preventDefault();
+
+        if (!editGoal.title.trim() || editGoal.targetAmount <= 0) {
+            alert('Please provide valid goal details');
+            return;
+        }
+
+        try {
+            const deadline = editGoal.deadline ? editGoal.deadline : null;
+            await UpdateGoal(editGoal.id, editGoal.title, editGoal.targetAmount, deadline);
+            setShowEditModal(false);
+            await loadData();
+        } catch (error) {
+            alert('Error updating goal: ' + error);
+        }
+    };
+
+    const handleDeleteGoal = async (goalId: number) => {
+        if (!confirm('Are you sure you want to delete this goal? This will also remove all contributions.')) {
+            return;
+        }
+
+        try {
+            await DeleteGoal(goalId);
+            await loadData();
+        } catch (error) {
+            alert('Error deleting goal: ' + error);
         }
     };
 
@@ -209,15 +257,31 @@ const Goals = () => {
                                     </div>
                                 )}
 
-                                {!isCompleted && (
+                                <div style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
+                                    {!isCompleted && (
+                                        <button
+                                            className="action-button action-button-primary"
+                                            onClick={() => handleContribute(goal)}
+                                            style={{ flex: 1 }}
+                                        >
+                                            💰 Contribute
+                                        </button>
+                                    )}
                                     <button
-                                        className="action-button action-button-primary"
-                                        onClick={() => handleContribute(goal)}
-                                        style={{ width: '100%', marginTop: '15px' }}
+                                        className="action-button action-button-secondary"
+                                        onClick={() => handleEditGoal(goal)}
+                                        style={{ flex: 1 }}
                                     >
-                                        💰 Contribute
+                                        ✏️ Edit
                                     </button>
-                                )}
+                                    <button
+                                        className="action-button"
+                                        onClick={() => handleDeleteGoal(goal.id)}
+                                        style={{ flex: 1, background: '#f44336', color: 'white' }}
+                                    >
+                                        🗑️ Delete
+                                    </button>
+                                </div>
                             </div>
                         );
                     })
@@ -280,6 +344,63 @@ const Goals = () => {
                     </div>
                 </div>
             )}
+            {showEditModal && (
+                <div className="modal-overlay" onClick={() => setShowEditModal(false)}>
+                    <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-header">
+                            <h2>Edit Goal</h2>
+                        </div>
+
+                        <form onSubmit={submitEditGoal}>
+                            <div className="form-group">
+                                <label>Goal Title *</label>
+                                <input
+                                    type="text"
+                                    value={editGoal.title}
+                                    onChange={(e) => setEditGoal(prev => ({ ...prev, title: (e.target as HTMLInputElement).value }))}
+                                    placeholder="e.g., New Laptop, Emergency Fund"
+                                    required
+                                />
+                            </div>
+
+                            <div className="form-group">
+                                <label>Target Amount (₹) *</label>
+                                <input
+                                    type="number"
+                                    value={editGoal.targetAmount || ''}
+                                    onChange={(e) => setEditGoal(prev => ({ ...prev, targetAmount: parseFloat((e.target as HTMLInputElement).value) || 0 }))}
+                                    min="1"
+                                    step="100"
+                                    required
+                                />
+                            </div>
+
+                            <div className="form-group">
+                                <label>Deadline (Optional)</label>
+                                <input
+                                    type="date"
+                                    value={editGoal.deadline}
+                                    onChange={(e) => setEditGoal(prev => ({ ...prev, deadline: (e.target as HTMLInputElement).value }))}
+                                />
+                            </div>
+
+                            <div className="modal-actions">
+                                <button type="submit" className="action-button action-button-primary">
+                                    Update Goal
+                                </button>
+                                <button
+                                    type="button"
+                                    className="action-button action-button-secondary"
+                                    onClick={() => setShowEditModal(false)}
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
 
             {showContributeModal && selectedGoal && (
                 <div className="modal-overlay" onClick={() => setShowContributeModal(false)}>

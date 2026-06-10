@@ -22,11 +22,17 @@ export function CreateTrade(arg1:string,arg2:string,arg3:number,arg4:number,arg5
 
 export function DeleteBrokerConfig(arg1:number):Promise<void>;
 
+export function DeleteGoal(arg1:number):Promise<void>;
+
 export function DeleteTask(arg1:number):Promise<void>;
+
+export function DeleteTrade(arg1:number):Promise<void>;
 
 export function GetAllBrokerConfigs():Promise<Array<database.BrokerConfig>>;
 
 export function GetBrokerConfig(arg1:string):Promise<database.BrokerConfig>;
+
+export function GetDailyPLData(arg1:number):Promise<Array<Record<string, any>>>;
 
 export function GetGoals():Promise<Array<database.Goal>>;
 
@@ -60,6 +66,8 @@ export function GetTradingStats(arg1:string,arg2:string):Promise<Record<string, 
 
 export function GetUpstoxAuthURL(arg1:string,arg2:string):Promise<string>;
 
+export function GetUpstoxMarketNews():Promise<Array<main.NewsArticle>>;
+
 export function GetUpstoxMarketQuote(arg1:string,arg2:string):Promise<broker.MarketQuote>;
 
 export function GetUpstoxPositions(arg1:number):Promise<Array<broker.Position>>;
@@ -74,7 +82,11 @@ export function UpdateBrokerConfig(arg1:number,arg2:string,arg3:string,arg4:bool
 
 export function UpdateDailyChecklist(arg1:number,arg2:boolean,arg3:boolean,arg4:boolean,arg5:boolean,arg6:boolean,arg7:boolean):Promise<void>;
 
+export function UpdateGoal(arg1:number,arg2:string,arg3:number,arg4:any):Promise<void>;
+
 export function UpdateTaskStatus(arg1:number,arg2:string):Promise<void>;
+
+export function UpdateTrade(arg1:number,arg2:string,arg3:string,arg4:number,arg5:number,arg6:number,arg7:number,arg8:string,arg9:string,arg10:string,arg11:string,arg12:number,arg13:string):Promise<void>;
 
 export function UpdateTradingSettings(arg1:number,arg2:number,arg3:number):Promise<void>;
 

@@ -1,6 +1,6 @@
 import { h } from 'preact';
 import { useState, useEffect } from 'preact/hooks';
-import { GetTrades, CloseTrade } from '../../../wailsjs/go/main/App';
+import { GetTrades, CloseTrade, UpdateTrade, DeleteTrade } from '../../../wailsjs/go/main/App';
 import './Trading.css';
 
 interface Trade {
@@ -37,9 +37,25 @@ const TradeHistory = () => {
     });
     const [selectedTrade, setSelectedTrade] = useState<Trade | null>(null);
     const [showCloseModal, setShowCloseModal] = useState(false);
+    const [showEditModal, setShowEditModal] = useState(false);
     const [closeData, setCloseData] = useState({
         exitPrice: 0,
         emotionAfter: 'Calm'
+    });
+    const [editData, setEditData] = useState({
+        id: 0,
+        symbol: '',
+        tradeType: 'BUY',
+        instrumentType: 'EQUITY',
+        optionType: '',
+        strikePrice: 0,
+        expiryDate: '',
+        quantity: 0,
+        entryPrice: 0,
+        brokerage: 0,
+        otherCharges: 0,
+        notes: '',
+        emotionBefore: 'Calm'
     });
 
     useEffect(() => {
@@ -115,6 +131,67 @@ const TradeHistory = () => {
             await loadTrades();
         } catch (error) {
             alert('Error closing trade: ' + error);
+        }
+    };
+
+    const handleEditTrade = (trade: Trade) => {
+        setEditData({
+            id: trade.id,
+            symbol: trade.symbol,
+            tradeType: trade.trade_type,
+            instrumentType: trade.instrument_type || 'EQUITY',
+            optionType: trade.option_type || '',
+            strikePrice: trade.strike_price || 0,
+            expiryDate: trade.expiry_date || '',
+            quantity: trade.quantity,
+            entryPrice: trade.entry_price,
+            brokerage: trade.brokerage,
+            otherCharges: trade.other_charges,
+            notes: trade.notes,
+            emotionBefore: trade.emotion_before
+        });
+        setShowEditModal(true);
+    };
+
+    const submitEditTrade = async () => {
+        if (!editData.symbol || editData.quantity <= 0 || editData.entryPrice <= 0) {
+            alert('Please provide valid trade details');
+            return;
+        }
+
+        try {
+            await UpdateTrade(
+                editData.id,
+                editData.symbol,
+                editData.tradeType,
+                editData.quantity,
+                editData.entryPrice,
+                editData.brokerage,
+                editData.otherCharges,
+                editData.notes,
+                editData.emotionBefore,
+                editData.instrumentType,
+                editData.optionType,
+                editData.strikePrice,
+                editData.expiryDate
+            );
+            setShowEditModal(false);
+            await loadTrades();
+        } catch (error) {
+            alert('Error updating trade: ' + error);
+        }
+    };
+
+    const handleDeleteTrade = async (tradeId: number) => {
+        if (!confirm('Are you sure you want to delete this trade? This action cannot be undone.')) {
+            return;
+        }
+
+        try {
+            await DeleteTrade(tradeId);
+            await loadTrades();
+        } catch (error) {
+            alert('Error deleting trade: ' + error);
         }
     };
 
@@ -334,16 +411,33 @@ const TradeHistory = () => {
                                 </div>
                             )}
 
-                            {trade.status === 'OPEN' && (
-                                <div style={{ marginTop: '15px' }}>
+                            <div style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
+                                {trade.status === 'OPEN' && (
                                     <button
                                         className="action-button action-button-primary"
                                         onClick={() => handleCloseTrade(trade)}
+                                        style={{ flex: 1 }}
                                     >
                                         Close Trade
                                     </button>
-                                </div>
-                            )}
+                                )}
+                                {trade.status === 'OPEN' && (
+                                    <button
+                                        className="action-button action-button-secondary"
+                                        onClick={() => handleEditTrade(trade)}
+                                        style={{ flex: 1 }}
+                                    >
+                                        ✏️ Edit
+                                    </button>
+                                )}
+                                <button
+                                    className="action-button"
+                                    onClick={() => handleDeleteTrade(trade.id)}
+                                    style={{ flex: 1, background: '#f44336', color: 'white' }}
+                                >
+                                    🗑️ Delete
+                                </button>
+                            </div>
                         </div>
                     ))
                 )}
@@ -393,6 +487,106 @@ const TradeHistory = () => {
                             <button
                                 className="action-button action-button-secondary"
                                 onClick={() => setShowCloseModal(false)}
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {showEditModal && (
+                <div className="modal-overlay" onClick={() => setShowEditModal(false)}>
+                    <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-header">
+                            <h2>Edit Trade</h2>
+                        </div>
+
+                        <div className="form-group">
+                            <label>Symbol *</label>
+                            <input
+                                type="text"
+                                value={editData.symbol}
+                                onChange={(e) => setEditData(prev => ({ ...prev, symbol: (e.target as HTMLInputElement).value }))}
+                                required
+                            />
+                        </div>
+
+                        <div className="form-group">
+                            <label>Trade Type *</label>
+                            <select
+                                value={editData.tradeType}
+                                onChange={(e) => setEditData(prev => ({ ...prev, tradeType: (e.target as HTMLSelectElement).value }))}
+                            >
+                                <option value="BUY">BUY</option>
+                                <option value="SELL">SELL</option>
+                            </select>
+                        </div>
+
+                        <div className="form-group">
+                            <label>Quantity *</label>
+                            <input
+                                type="number"
+                                value={editData.quantity || ''}
+                                onChange={(e) => setEditData(prev => ({ ...prev, quantity: parseInt((e.target as HTMLInputElement).value) || 0 }))}
+                                min="1"
+                                required
+                            />
+                        </div>
+
+                        <div className="form-group">
+                            <label>Entry Price (₹) *</label>
+                            <input
+                                type="number"
+                                step="0.01"
+                                value={editData.entryPrice || ''}
+                                onChange={(e) => setEditData(prev => ({ ...prev, entryPrice: parseFloat((e.target as HTMLInputElement).value) || 0 }))}
+                                min="0.01"
+                                required
+                            />
+                        </div>
+
+                        <div className="form-group">
+                            <label>Brokerage (₹)</label>
+                            <input
+                                type="number"
+                                step="0.01"
+                                value={editData.brokerage || ''}
+                                onChange={(e) => setEditData(prev => ({ ...prev, brokerage: parseFloat((e.target as HTMLInputElement).value) || 0 }))}
+                                min="0"
+                            />
+                        </div>
+
+                        <div className="form-group">
+                            <label>Other Charges (₹)</label>
+                            <input
+                                type="number"
+                                step="0.01"
+                                value={editData.otherCharges || ''}
+                                onChange={(e) => setEditData(prev => ({ ...prev, otherCharges: parseFloat((e.target as HTMLInputElement).value) || 0 }))}
+                                min="0"
+                            />
+                        </div>
+
+                        <div className="form-group">
+                            <label>Notes</label>
+                            <textarea
+                                value={editData.notes}
+                                onChange={(e) => setEditData(prev => ({ ...prev, notes: (e.target as HTMLTextAreaElement).value }))}
+                                rows={3}
+                            />
+                        </div>
+
+                        <div className="modal-actions">
+                            <button
+                                className="action-button action-button-primary"
+                                onClick={submitEditTrade}
+                            >
+                                Update Trade
+                            </button>
+                            <button
+                                className="action-button action-button-secondary"
+                                onClick={() => setShowEditModal(false)}
                             >
                                 Cancel
                             </button>

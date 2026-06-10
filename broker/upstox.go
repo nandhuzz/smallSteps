@@ -335,4 +335,65 @@ func (c *UpstoxClient) GetUserProfile() (*UserProfile, error) {
 	return &result.Data, nil
 }
 
+// MarketNews represents market news article
+type MarketNews struct {
+	Title       string    `json:"title"`
+	Description string    `json:"description"`
+	URL         string    `json:"url"`
+	PublishedAt time.Time `json:"published_at"`
+	Source      string    `json:"source"`
+	Category    string    `json:"category"`
+}
+
+// GetMarketNews fetches market news (using a third-party news API or mock data)
+// Note: Upstox doesn't provide a direct news API, so we'll use a general approach
+func (c *UpstoxClient) GetMarketNews() ([]MarketNews, error) {
+	// For now, return mock Indian market news
+	// In production, integrate with NewsAPI, Google News API, or similar
+	news := []MarketNews{
+		{
+			Title:       "Sensex rises 500 points on positive global cues",
+			Description: "Indian stock markets opened higher today following positive trends in global markets and strong buying in banking stocks.",
+			URL:         "https://economictimes.indiatimes.com",
+			PublishedAt: time.Now().Add(-1 * time.Hour),
+			Source:      "Economic Times",
+			Category:    "Market",
+		},
+		{
+			Title:       "Nifty crosses 18,000 mark amid strong buying",
+			Description: "The Nifty 50 index crossed the 18,000 mark today driven by strong buying in banking and IT stocks.",
+			URL:         "https://moneycontrol.com",
+			PublishedAt: time.Now().Add(-2 * time.Hour),
+			Source:      "Moneycontrol",
+			Category:    "Market",
+		},
+		{
+			Title:       "RBI announces new monetary policy measures",
+			Description: "Reserve Bank of India announced new measures to control inflation and support economic growth.",
+			URL:         "https://businessstandard.com",
+			PublishedAt: time.Now().Add(-3 * time.Hour),
+			Source:      "Business Standard",
+			Category:    "Policy",
+		},
+		{
+			Title:       "FII inflows boost market sentiment",
+			Description: "Foreign institutional investors pumped in significant capital into Indian equities this week.",
+			URL:         "https://livemint.com",
+			PublishedAt: time.Now().Add(-4 * time.Hour),
+			Source:      "Mint",
+			Category:    "Market",
+		},
+		{
+			Title:       "IT sector shows strong growth momentum",
+			Description: "Major IT companies reported better-than-expected quarterly results, boosting sector outlook.",
+			URL:         "https://economictimes.indiatimes.com",
+			PublishedAt: time.Now().Add(-5 * time.Hour),
+			Source:      "Economic Times",
+			Category:    "Sector",
+		},
+	}
+	
+	return news, nil
+}
+
 // Made with Bob

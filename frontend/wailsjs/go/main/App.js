@@ -38,8 +38,16 @@ export function DeleteBrokerConfig(arg1) {
   return window['go']['main']['App']['DeleteBrokerConfig'](arg1);
 }
 
+export function DeleteGoal(arg1) {
+  return window['go']['main']['App']['DeleteGoal'](arg1);
+}
+
 export function DeleteTask(arg1) {
   return window['go']['main']['App']['DeleteTask'](arg1);
+}
+
+export function DeleteTrade(arg1) {
+  return window['go']['main']['App']['DeleteTrade'](arg1);
 }
 
 export function GetAllBrokerConfigs() {
@@ -48,6 +56,10 @@ export function GetAllBrokerConfigs() {
 
 export function GetBrokerConfig(arg1) {
   return window['go']['main']['App']['GetBrokerConfig'](arg1);
+}
+
+export function GetDailyPLData(arg1) {
+  return window['go']['main']['App']['GetDailyPLData'](arg1);
 }
 
 export function GetGoals() {
@@ -114,6 +126,10 @@ export function GetUpstoxAuthURL(arg1, arg2) {
   return window['go']['main']['App']['GetUpstoxAuthURL'](arg1, arg2);
 }
 
+export function GetUpstoxMarketNews() {
+  return window['go']['main']['App']['GetUpstoxMarketNews']();
+}
+
 export function GetUpstoxMarketQuote(arg1, arg2) {
   return window['go']['main']['App']['GetUpstoxMarketQuote'](arg1, arg2);
 }
@@ -142,8 +158,16 @@ export function UpdateDailyChecklist(arg1, arg2, arg3, arg4, arg5, arg6, arg7) {
   return window['go']['main']['App']['UpdateDailyChecklist'](arg1, arg2, arg3, arg4, arg5, arg6, arg7);
 }
 
+export function UpdateGoal(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['UpdateGoal'](arg1, arg2, arg3, arg4);
+}
+
 export function UpdateTaskStatus(arg1, arg2) {
   return window['go']['main']['App']['UpdateTaskStatus'](arg1, arg2);
+}
+
+export function UpdateTrade(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12, arg13) {
+  return window['go']['main']['App']['UpdateTrade'](arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12, arg13);
 }
 
 export function UpdateTradingSettings(arg1, arg2, arg3) {

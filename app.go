@@ -78,6 +78,44 @@ func (a *App) CreateTrade(symbol, tradeType string, quantity int, entryPrice, br
 	return trade.ID, err
 }
 
+func (a *App) UpdateTrade(tradeID int, symbol, tradeType string, quantity int, entryPrice, brokerage, otherCharges float64, notes, emotionBefore, instrumentType, optionType string, strikePrice float64, expiryDate string) error {
+	trade := &database.Trade{
+		ID:            tradeID,
+		Symbol:        symbol,
+		TradeType:     tradeType,
+		Quantity:      quantity,
+		EntryPrice:    entryPrice,
+		Brokerage:     brokerage,
+		OtherCharges:  otherCharges,
+		Notes:         notes,
+		EmotionBefore: emotionBefore,
+	}
+	
+	// Set optional fields for options trading
+	if instrumentType != "" {
+		instType := instrumentType
+		trade.InstrumentType = &instType
+	}
+	if optionType != "" {
+		optType := optionType
+		trade.OptionType = &optType
+	}
+	if strikePrice > 0 {
+		strike := strikePrice
+		trade.StrikePrice = &strike
+	}
+	if expiryDate != "" {
+		expiry := expiryDate
+		trade.ExpiryDate = &expiry
+	}
+	
+	return a.db.UpdateTrade(trade)
+}
+
+func (a *App) DeleteTrade(tradeID int) error {
+	return a.db.DeleteTrade(tradeID)
+}
+
 func (a *App) CloseTrade(tradeID int, exitPrice float64, emotionAfter string) error {
 	return a.db.CloseTrade(tradeID, exitPrice, emotionAfter)
 }
@@ -164,6 +202,20 @@ func (a *App) GetGoals() ([]database.Goal, error) {
 	return a.db.GetGoals()
 }
 
+func (a *App) UpdateGoal(id int, title string, targetAmount float64, deadline *string) error {
+	goal := &database.Goal{
+		ID:           id,
+		Title:        title,
+		TargetAmount: targetAmount,
+		Deadline:     deadline,
+	}
+	return a.db.UpdateGoal(goal)
+}
+
+func (a *App) DeleteGoal(goalID int) error {
+	return a.db.DeleteGoal(goalID)
+}
+
 func (a *App) ContributeToGoal(goalID, tradeID int, amount float64) error {
 	return a.db.ContributeToGoal(goalID, tradeID, amount)
 }
@@ -178,6 +230,10 @@ func (a *App) GetMonthlyStats() (map[string]interface{}, error) {
 	startDate := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location()).Format("2006-01-02")
 	endDate := now.Format("2006-01-02")
 	return a.db.GetTradingStats(startDate, endDate)
+}
+
+func (a *App) GetDailyPLData(days int) ([]map[string]interface{}, error) {
+	return a.db.GetDailyPLData(days)
 }
 
 // Overtrading Check
@@ -302,6 +358,30 @@ func (a *App) getMockNews() []NewsArticle {
 			Source:      "Business Standard",
 		},
 	}
+}
+
+// Get Market News from Upstox integration
+func (a *App) GetUpstoxMarketNews() ([]NewsArticle, error) {
+	client := broker.NewUpstoxClientWithAnalyticsToken()
+	
+	news, err := client.GetMarketNews()
+	if err != nil {
+		// Fallback to mock news
+		return a.getMockNews(), nil
+	}
+	
+	var articles []NewsArticle
+	for _, n := range news {
+		articles = append(articles, NewsArticle{
+			Title:       n.Title,
+			Description: n.Description,
+			URL:         n.URL,
+			PublishedAt: n.PublishedAt.Format(time.RFC3339),
+			Source:      n.Source,
+		})
+	}
+	
+	return articles, nil
 }
 
 // Get Recent Logs
