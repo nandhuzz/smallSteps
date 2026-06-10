@@ -22,8 +22,8 @@ export function CreateTask(arg1, arg2, arg3, arg4) {
   return window['go']['main']['App']['CreateTask'](arg1, arg2, arg3, arg4);
 }
 
-export function CreateTrade(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8) {
-  return window['go']['main']['App']['CreateTrade'](arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
+export function CreateTrade(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12) {
+  return window['go']['main']['App']['CreateTrade'](arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12);
 }
 
 export function DeleteTask(arg1) {

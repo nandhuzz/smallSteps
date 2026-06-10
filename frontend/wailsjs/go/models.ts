@@ -142,6 +142,10 @@ export namespace database {
 	    date: any;
 	    symbol: string;
 	    trade_type: string;
+	    instrument_type?: string;
+	    option_type?: string;
+	    strike_price?: number;
+	    expiry_date?: string;
 	    quantity: number;
 	    entry_price: number;
 	    exit_price?: number;
@@ -165,6 +169,10 @@ export namespace database {
 	        this.date = this.convertValues(source["date"], null);
 	        this.symbol = source["symbol"];
 	        this.trade_type = source["trade_type"];
+	        this.instrument_type = source["instrument_type"];
+	        this.option_type = source["option_type"];
+	        this.strike_price = source["strike_price"];
+	        this.expiry_date = source["expiry_date"];
 	        this.quantity = source["quantity"];
 	        this.entry_price = source["entry_price"];
 	        this.exit_price = source["exit_price"];

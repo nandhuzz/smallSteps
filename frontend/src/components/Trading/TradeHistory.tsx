@@ -8,6 +8,10 @@ interface Trade {
     date: string;
     symbol: string;
     trade_type: string;
+    instrument_type?: string;
+    option_type?: string;
+    strike_price?: number;
+    expiry_date?: string;
     quantity: number;
     entry_price: number;
     exit_price?: number;
@@ -262,6 +266,11 @@ const TradeHistory = () => {
                             <div className="trade-header">
                                 <div>
                                     <span className="trade-symbol">{trade.symbol}</span>
+                                    {trade.instrument_type === 'OPTIONS' && trade.strike_price && (
+                                        <span className="option-badge" style={{ marginLeft: '10px', background: '#667eea', color: 'white', padding: '3px 10px', borderRadius: '12px', fontSize: '12px' }}>
+                                            {trade.strike_price} {trade.option_type}
+                                        </span>
+                                    )}
                                     <span className={`status-badge status-${trade.status.toLowerCase()}`} style={{ marginLeft: '10px' }}>
                                         {trade.status}
                                     </span>
@@ -271,6 +280,12 @@ const TradeHistory = () => {
                                 </div>
                             </div>
 
+                            {trade.instrument_type === 'OPTIONS' && trade.expiry_date && (
+                                <div style={{ marginTop: '8px', fontSize: '13px', color: '#666' }}>
+                                    📅 Expiry: {new Date(trade.expiry_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                </div>
+                            )}
+
                             <div className="trade-details">
                                 <div className="trade-detail">
                                     <span className="trade-detail-label">Type</span>
@@ -278,6 +293,12 @@ const TradeHistory = () => {
                                         {trade.trade_type}
                                     </span>
                                 </div>
+                                {trade.instrument_type && (
+                                    <div className="trade-detail">
+                                        <span className="trade-detail-label">Instrument</span>
+                                        <span className="trade-detail-value">{trade.instrument_type}</span>
+                                    </div>
+                                )}
                                 <div className="trade-detail">
                                     <span className="trade-detail-label">Quantity</span>
                                     <span className="trade-detail-value">{trade.quantity}</span>

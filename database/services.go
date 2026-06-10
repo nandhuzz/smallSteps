@@ -8,16 +8,17 @@ import (
 
 // Trade Services
 func (d *Database) CreateTrade(trade *Trade) error {
-	query := `INSERT INTO trades (date, symbol, trade_type, quantity, entry_price, brokerage, other_charges, notes, emotion_before, status)
-			  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-	result, err := d.DB.Exec(query, trade.Date, trade.Symbol, trade.TradeType, trade.Quantity, 
+	query := `INSERT INTO trades (date, symbol, trade_type, instrument_type, option_type, strike_price, expiry_date, quantity, entry_price, brokerage, other_charges, notes, emotion_before, status)
+			  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+	result, err := d.DB.Exec(query, trade.Date, trade.Symbol, trade.TradeType, trade.InstrumentType,
+		trade.OptionType, trade.StrikePrice, trade.ExpiryDate, trade.Quantity,
 		trade.EntryPrice, trade.Brokerage, trade.OtherCharges, trade.Notes, trade.EmotionBefore, "OPEN")
 	if err != nil {
 		return err
 	}
 	id, _ := result.LastInsertId()
 	trade.ID = int(id)
-	d.LogMessage("TRADE", fmt.Sprintf("New trade created: %s %s", trade.TradeType, trade.Symbol), "")
+	d.LogMessage("TRADE", fmt.Sprintf("New trade created: %s %s %s", trade.TradeType, trade.InstrumentType, trade.Symbol), "")
 	return nil
 }
 
@@ -50,9 +51,10 @@ func (d *Database) CloseTrade(tradeID int, exitPrice float64, emotionAfter strin
 }
 
 func (d *Database) GetTrades(limit int) ([]Trade, error) {
-	query := `SELECT id, date, symbol, trade_type, quantity, entry_price, 
-			  COALESCE(exit_price, 0), COALESCE(profit_loss, 0), brokerage, other_charges, 
-			  status, notes, emotion_before, COALESCE(emotion_after, ''), created_at 
+	query := `SELECT id, date, symbol, trade_type, COALESCE(instrument_type, 'EQUITY'),
+			  COALESCE(option_type, ''), COALESCE(strike_price, 0), COALESCE(expiry_date, ''),
+			  quantity, entry_price, COALESCE(exit_price, 0), COALESCE(profit_loss, 0),
+			  brokerage, other_charges, status, notes, emotion_before, COALESCE(emotion_after, ''), created_at
 			  FROM trades ORDER BY date DESC LIMIT ?`
 	
 	rows, err := d.DB.Query(query, limit)
@@ -64,9 +66,11 @@ func (d *Database) GetTrades(limit int) ([]Trade, error) {
 	var trades []Trade
 	for rows.Next() {
 		var trade Trade
-		var exitPrice, profitLoss float64
-		err := rows.Scan(&trade.ID, &trade.Date, &trade.Symbol, &trade.TradeType, &trade.Quantity,
-			&trade.EntryPrice, &exitPrice, &profitLoss, &trade.Brokerage, &trade.OtherCharges,
+		var exitPrice, profitLoss, strikePrice float64
+		var optionType, expiryDate string
+		err := rows.Scan(&trade.ID, &trade.Date, &trade.Symbol, &trade.TradeType, &trade.InstrumentType,
+			&optionType, &strikePrice, &expiryDate,
+			&trade.Quantity, &trade.EntryPrice, &exitPrice, &profitLoss, &trade.Brokerage, &trade.OtherCharges,
 			&trade.Status, &trade.Notes, &trade.EmotionBefore, &trade.EmotionAfter, &trade.CreatedAt)
 		if err != nil {
 			return nil, err
@@ -75,6 +79,15 @@ func (d *Database) GetTrades(limit int) ([]Trade, error) {
 			trade.ExitPrice = &exitPrice
 			trade.ProfitLoss = &profitLoss
 		}
+		if optionType != "" {
+			trade.OptionType = &optionType
+		}
+		if strikePrice > 0 {
+			trade.StrikePrice = &strikePrice
+		}
+		if expiryDate != "" {
+			trade.ExpiryDate = &expiryDate
+		}
 		trades = append(trades, trade)
 	}
 	return trades, nil
@@ -82,9 +95,10 @@ func (d *Database) GetTrades(limit int) ([]Trade, error) {
 
 func (d *Database) GetTodayTrades() ([]Trade, error) {
 	today := time.Now().Format("2006-01-02")
-	query := `SELECT id, date, symbol, trade_type, quantity, entry_price, 
-			  COALESCE(exit_price, 0), COALESCE(profit_loss, 0), brokerage, other_charges, 
-			  status, notes, emotion_before, COALESCE(emotion_after, ''), created_at 
+	query := `SELECT id, date, symbol, trade_type, COALESCE(instrument_type, 'EQUITY'),
+			  COALESCE(option_type, ''), COALESCE(strike_price, 0), COALESCE(expiry_date, ''),
+			  quantity, entry_price, COALESCE(exit_price, 0), COALESCE(profit_loss, 0),
+			  brokerage, other_charges, status, notes, emotion_before, COALESCE(emotion_after, ''), created_at
 			  FROM trades WHERE DATE(date) = ? ORDER BY date DESC`
 	
 	rows, err := d.DB.Query(query, today)
@@ -96,9 +110,11 @@ func (d *Database) GetTodayTrades() ([]Trade, error) {
 	var trades []Trade
 	for rows.Next() {
 		var trade Trade
-		var exitPrice, profitLoss float64
-		err := rows.Scan(&trade.ID, &trade.Date, &trade.Symbol, &trade.TradeType, &trade.Quantity,
-			&trade.EntryPrice, &exitPrice, &profitLoss, &trade.Brokerage, &trade.OtherCharges,
+		var exitPrice, profitLoss, strikePrice float64
+		var optionType, expiryDate string
+		err := rows.Scan(&trade.ID, &trade.Date, &trade.Symbol, &trade.TradeType, &trade.InstrumentType,
+			&optionType, &strikePrice, &expiryDate,
+			&trade.Quantity, &trade.EntryPrice, &exitPrice, &profitLoss, &trade.Brokerage, &trade.OtherCharges,
 			&trade.Status, &trade.Notes, &trade.EmotionBefore, &trade.EmotionAfter, &trade.CreatedAt)
 		if err != nil {
 			return nil, err
@@ -106,6 +122,15 @@ func (d *Database) GetTodayTrades() ([]Trade, error) {
 		if exitPrice > 0 {
 			trade.ExitPrice = &exitPrice
 			trade.ProfitLoss = &profitLoss
+		}
+		if optionType != "" {
+			trade.OptionType = &optionType
+		}
+		if strikePrice > 0 {
+			trade.StrikePrice = &strikePrice
+		}
+		if expiryDate != "" {
+			trade.ExpiryDate = &expiryDate
 		}
 		trades = append(trades, trade)
 	}

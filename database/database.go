@@ -48,6 +48,10 @@ func (d *Database) createTables() error {
 		date DATETIME NOT NULL,
 		symbol TEXT NOT NULL,
 		trade_type TEXT NOT NULL, -- BUY or SELL
+		instrument_type TEXT DEFAULT 'EQUITY', -- EQUITY or OPTIONS
+		option_type TEXT, -- CALL or PUT (for options)
+		strike_price REAL, -- Strike price for options
+		expiry_date DATE, -- Expiry date for options
 		quantity INTEGER NOT NULL,
 		entry_price REAL NOT NULL,
 		exit_price REAL,
@@ -149,26 +153,122 @@ func (d *Database) createTables() error {
 	`
 
 	_, err := d.DB.Exec(schema)
-	return err
+	if err != nil {
+		return err
+	}
+
+	// Run migrations to add missing columns to existing tables
+	return d.runMigrations()
+}
+
+// runMigrations adds missing columns to existing tables
+func (d *Database) runMigrations() error {
+	// Check if instrument_type column exists in trades table
+	var columnExists int
+	err := d.DB.QueryRow(`
+		SELECT COUNT(*) FROM pragma_table_info('trades')
+		WHERE name='instrument_type'
+	`).Scan(&columnExists)
+	
+	if err != nil {
+		return err
+	}
+
+	// Add instrument_type column if it doesn't exist
+	if columnExists == 0 {
+		_, err = d.DB.Exec(`
+			ALTER TABLE trades ADD COLUMN instrument_type TEXT DEFAULT 'EQUITY'
+		`)
+		if err != nil {
+			return err
+		}
+		log.Println("Migration: Added instrument_type column to trades table")
+	}
+
+	// Check if option_type column exists
+	err = d.DB.QueryRow(`
+		SELECT COUNT(*) FROM pragma_table_info('trades')
+		WHERE name='option_type'
+	`).Scan(&columnExists)
+	
+	if err != nil {
+		return err
+	}
+
+	if columnExists == 0 {
+		_, err = d.DB.Exec(`
+			ALTER TABLE trades ADD COLUMN option_type TEXT
+		`)
+		if err != nil {
+			return err
+		}
+		log.Println("Migration: Added option_type column to trades table")
+	}
+
+	// Check if strike_price column exists
+	err = d.DB.QueryRow(`
+		SELECT COUNT(*) FROM pragma_table_info('trades')
+		WHERE name='strike_price'
+	`).Scan(&columnExists)
+	
+	if err != nil {
+		return err
+	}
+
+	if columnExists == 0 {
+		_, err = d.DB.Exec(`
+			ALTER TABLE trades ADD COLUMN strike_price REAL
+		`)
+		if err != nil {
+			return err
+		}
+		log.Println("Migration: Added strike_price column to trades table")
+	}
+
+	// Check if expiry_date column exists
+	err = d.DB.QueryRow(`
+		SELECT COUNT(*) FROM pragma_table_info('trades')
+		WHERE name='expiry_date'
+	`).Scan(&columnExists)
+	
+	if err != nil {
+		return err
+	}
+
+	if columnExists == 0 {
+		_, err = d.DB.Exec(`
+			ALTER TABLE trades ADD COLUMN expiry_date DATE
+		`)
+		if err != nil {
+			return err
+		}
+		log.Println("Migration: Added expiry_date column to trades table")
+	}
+
+	return nil
 }
 
 // Trade represents a trading transaction
 type Trade struct {
-	ID            int       `json:"id"`
-	Date          time.Time `json:"date"`
-	Symbol        string    `json:"symbol"`
-	TradeType     string    `json:"trade_type"`
-	Quantity      int       `json:"quantity"`
-	EntryPrice    float64   `json:"entry_price"`
-	ExitPrice     *float64  `json:"exit_price"`
-	ProfitLoss    *float64  `json:"profit_loss"`
-	Brokerage     float64   `json:"brokerage"`
-	OtherCharges  float64   `json:"other_charges"`
-	Status        string    `json:"status"`
-	Notes         string    `json:"notes"`
-	EmotionBefore string    `json:"emotion_before"`
-	EmotionAfter  string    `json:"emotion_after"`
-	CreatedAt     time.Time `json:"created_at"`
+	ID             int       `json:"id"`
+	Date           time.Time `json:"date"`
+	Symbol         string    `json:"symbol"`
+	TradeType      string    `json:"trade_type"`
+	InstrumentType *string   `json:"instrument_type"`
+	OptionType     *string   `json:"option_type"`
+	StrikePrice    *float64  `json:"strike_price"`
+	ExpiryDate     *string   `json:"expiry_date"`
+	Quantity       int       `json:"quantity"`
+	EntryPrice     float64   `json:"entry_price"`
+	ExitPrice      *float64  `json:"exit_price"`
+	ProfitLoss     *float64  `json:"profit_loss"`
+	Brokerage      float64   `json:"brokerage"`
+	OtherCharges   float64   `json:"other_charges"`
+	Status         string    `json:"status"`
+	Notes          string    `json:"notes"`
+	EmotionBefore  string    `json:"emotion_before"`
+	EmotionAfter   string    `json:"emotion_after"`
+	CreatedAt      time.Time `json:"created_at"`
 }
 
 // DailyChecklist represents daily trading checklist

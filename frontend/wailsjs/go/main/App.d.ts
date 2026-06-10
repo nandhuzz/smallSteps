@@ -13,7 +13,7 @@ export function CreateGoal(arg1:string,arg2:number,arg3:any):Promise<void>;
 
 export function CreateTask(arg1:string,arg2:string,arg3:string,arg4:any):Promise<void>;
 
-export function CreateTrade(arg1:string,arg2:string,arg3:number,arg4:number,arg5:number,arg6:number,arg7:string,arg8:string):Promise<number>;
+export function CreateTrade(arg1:string,arg2:string,arg3:number,arg4:number,arg5:number,arg6:number,arg7:string,arg8:string,arg9:string,arg10:string,arg11:number,arg12:string):Promise<number>;
 
 export function DeleteTask(arg1:number):Promise<void>;
 

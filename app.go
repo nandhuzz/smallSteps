@@ -42,7 +42,7 @@ func (a *App) shutdown(ctx context.Context) {
 }
 
 // Trade Methods
-func (a *App) CreateTrade(symbol, tradeType string, quantity int, entryPrice, brokerage, otherCharges float64, notes, emotionBefore string) (int, error) {
+func (a *App) CreateTrade(symbol, tradeType string, quantity int, entryPrice, brokerage, otherCharges float64, notes, emotionBefore, instrumentType, optionType string, strikePrice float64, expiryDate string) (int, error) {
 	trade := &database.Trade{
 		Date:          time.Now(),
 		Symbol:        symbol,
@@ -54,6 +54,25 @@ func (a *App) CreateTrade(symbol, tradeType string, quantity int, entryPrice, br
 		Notes:         notes,
 		EmotionBefore: emotionBefore,
 	}
+	
+	// Set optional fields for options trading
+	if instrumentType != "" {
+		instType := instrumentType
+		trade.InstrumentType = &instType
+	}
+	if optionType != "" {
+		optType := optionType
+		trade.OptionType = &optType
+	}
+	if strikePrice > 0 {
+		strike := strikePrice
+		trade.StrikePrice = &strike
+	}
+	if expiryDate != "" {
+		expiry := expiryDate
+		trade.ExpiryDate = &expiry
+	}
+	
 	err := a.db.CreateTrade(trade)
 	return trade.ID, err
 }
