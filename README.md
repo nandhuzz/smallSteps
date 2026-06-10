@@ -16,6 +16,7 @@ A comprehensive Windows desktop application built with Wails and React TypeScrip
 - **📝 Task Management** - Track trading-related tasks and to-dos
 - **🎯 Goal Tracker** - Set financial goals and track progress
 - **📰 Market News** - Latest Indian market news integration
+- **🔗 Broker Integration** - Upstox Analytics Token support for portfolio sync
 - **⚙️ Settings** - Configure trading limits and preferences
 - **📋 System Logs** - Comprehensive activity logging
 
@@ -102,10 +103,17 @@ smallSteps/
 │   │       ├── News/           # Market news
 │   │       ├── Settings/       # App settings
 │   │       ├── Logs/           # System logs
+│   │       ├── Broker/         # Upstox integration
 │   │       └── Sidebar/        # Navigation sidebar
 │   └── package.json
+├── broker/
+│   └── upstox.go          # Upstox API client
 ├── build/                  # Build artifacts
+├── .env                    # Environment variables (not in git)
+├── .env.example            # Environment template
 ├── IMPLEMENTATION_GUIDE.md # Detailed implementation guide
+├── UPSTOX_INTEGRATION.md   # Upstox OAuth integration guide
+├── UPSTOX_ANALYTICS_TOKEN.md # Analytics Token setup guide
 └── README.md              # This file
 ```
 
@@ -167,6 +175,20 @@ Database location: `C:\Users\<username>\.smallsteps\trading.db`
 See `IMPLEMENTATION_GUIDE.md` for detailed implementation instructions.
 
 ## 🔧 Configuration
+
+### Environment Variables
+
+Create a `.env` file in the root directory (copy from `.env.example`):
+
+```env
+# Upstox Analytics Token (optional)
+UPSTOX_ANALYTICS_TOKEN=your_token_here
+```
+
+**Upstox Integration:**
+- See [UPSTOX_ANALYTICS_TOKEN.md](UPSTOX_ANALYTICS_TOKEN.md) for setup guide
+- Get your token from [Upstox API Apps](https://api.upstox.com/apps)
+- Provides read-only access to portfolio, trades, and market data
 
 ### Trading Limits
 Configure in Settings (default values):
@@ -263,6 +285,8 @@ This project is licensed under the MIT License.
 
 - [Wails Documentation](https://wails.io/docs/introduction)
 - [Implementation Guide](./IMPLEMENTATION_GUIDE.md)
+- [Upstox Analytics Token Guide](./UPSTOX_ANALYTICS_TOKEN.md)
+- [Upstox OAuth Integration](./UPSTOX_INTEGRATION.md)
 - [Go Documentation](https://golang.org/doc/)
 - [Preact Documentation](https://preactjs.com/)
 

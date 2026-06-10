@@ -407,10 +407,183 @@ func (d *Database) GetTradingSettings() (*TradingSettings, error) {
 }
 
 func (d *Database) UpdateTradingSettings(settings *TradingSettings) error {
-	query := `UPDATE trading_settings SET max_trades_per_day = ?, max_loss_per_day = ?, 
+	query := `UPDATE trading_settings SET max_trades_per_day = ?, max_loss_per_day = ?,
 			  max_loss_per_trade = ?, updated_at = CURRENT_TIMESTAMP WHERE id = 1`
 	_, err := d.DB.Exec(query, settings.MaxTradesPerDay, settings.MaxLossPerDay, settings.MaxLossPerTrade)
 	return err
+}
+
+// Broker Configuration Services
+func (d *Database) CreateBrokerConfig(config *BrokerConfig) error {
+	query := `INSERT INTO broker_config (broker_name, api_key, api_secret, access_token, refresh_token,
+			  token_expiry, is_active, auto_sync_trades, auto_sync_positions, sync_interval)
+			  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+	result, err := d.DB.Exec(query, config.BrokerName, config.APIKey, config.APISecret,
+		config.AccessToken, config.RefreshToken, config.TokenExpiry, config.IsActive,
+		config.AutoSyncTrades, config.AutoSyncPositions, config.SyncInterval)
+	if err != nil {
+		return err
+	}
+	id, _ := result.LastInsertId()
+	config.ID = int(id)
+	return nil
+}
+
+func (d *Database) GetBrokerConfig(brokerName string) (*BrokerConfig, error) {
+	var config BrokerConfig
+	var tokenExpiry, lastSync sql.NullTime
+	
+	query := `SELECT id, broker_name, api_key, api_secret, access_token, refresh_token,
+			  token_expiry, is_active, auto_sync_trades, auto_sync_positions, sync_interval,
+			  last_sync, created_at, updated_at
+			  FROM broker_config WHERE broker_name = ? ORDER BY id DESC LIMIT 1`
+	
+	err := d.DB.QueryRow(query, brokerName).Scan(&config.ID, &config.BrokerName, &config.APIKey,
+		&config.APISecret, &config.AccessToken, &config.RefreshToken, &tokenExpiry,
+		&config.IsActive, &config.AutoSyncTrades, &config.AutoSyncPositions, &config.SyncInterval,
+		&lastSync, &config.CreatedAt, &config.UpdatedAt)
+	
+	if err != nil {
+		return nil, err
+	}
+	
+	if tokenExpiry.Valid {
+		config.TokenExpiry = &tokenExpiry.Time
+	}
+	if lastSync.Valid {
+		config.LastSync = &lastSync.Time
+	}
+	
+	return &config, nil
+}
+
+func (d *Database) GetAllBrokerConfigs() ([]BrokerConfig, error) {
+	query := `SELECT id, broker_name, api_key, api_secret, access_token, refresh_token,
+			  token_expiry, is_active, auto_sync_trades, auto_sync_positions, sync_interval,
+			  last_sync, created_at, updated_at
+			  FROM broker_config ORDER BY created_at DESC`
+	
+	rows, err := d.DB.Query(query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var configs []BrokerConfig
+	for rows.Next() {
+		var config BrokerConfig
+		var tokenExpiry, lastSync sql.NullTime
+		
+		err := rows.Scan(&config.ID, &config.BrokerName, &config.APIKey, &config.APISecret,
+			&config.AccessToken, &config.RefreshToken, &tokenExpiry, &config.IsActive,
+			&config.AutoSyncTrades, &config.AutoSyncPositions, &config.SyncInterval,
+			&lastSync, &config.CreatedAt, &config.UpdatedAt)
+		if err != nil {
+			return nil, err
+		}
+		
+		if tokenExpiry.Valid {
+			config.TokenExpiry = &tokenExpiry.Time
+		}
+		if lastSync.Valid {
+			config.LastSync = &lastSync.Time
+		}
+		
+		configs = append(configs, config)
+	}
+	return configs, nil
+}
+
+func (d *Database) UpdateBrokerConfig(config *BrokerConfig) error {
+	query := `UPDATE broker_config SET api_key = ?, api_secret = ?, access_token = ?,
+			  refresh_token = ?, token_expiry = ?, is_active = ?, auto_sync_trades = ?,
+			  auto_sync_positions = ?, sync_interval = ?, updated_at = CURRENT_TIMESTAMP
+			  WHERE id = ?`
+	_, err := d.DB.Exec(query, config.APIKey, config.APISecret, config.AccessToken,
+		config.RefreshToken, config.TokenExpiry, config.IsActive, config.AutoSyncTrades,
+		config.AutoSyncPositions, config.SyncInterval, config.ID)
+	return err
+}
+
+func (d *Database) UpdateBrokerTokens(brokerID int, accessToken, refreshToken string, expiry *time.Time) error {
+	query := `UPDATE broker_config SET access_token = ?, refresh_token = ?, token_expiry = ?,
+			  updated_at = CURRENT_TIMESTAMP WHERE id = ?`
+	_, err := d.DB.Exec(query, accessToken, refreshToken, expiry, brokerID)
+	return err
+}
+
+func (d *Database) UpdateBrokerLastSync(brokerID int) error {
+	query := `UPDATE broker_config SET last_sync = CURRENT_TIMESTAMP WHERE id = ?`
+	_, err := d.DB.Exec(query, brokerID)
+	return err
+}
+
+func (d *Database) DeleteBrokerConfig(brokerID int) error {
+	query := `DELETE FROM broker_config WHERE id = ?`
+	_, err := d.DB.Exec(query, brokerID)
+	return err
+}
+
+// Synced Trades Services
+func (d *Database) CreateSyncedTrade(trade *SyncedTrade) error {
+	query := `INSERT INTO synced_trades (broker_id, broker_trade_id, local_trade_id, symbol,
+			  trade_type, quantity, price, trade_date, sync_status, raw_data)
+			  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+	result, err := d.DB.Exec(query, trade.BrokerID, trade.BrokerTradeID, trade.LocalTradeID,
+		trade.Symbol, trade.TradeType, trade.Quantity, trade.Price, trade.TradeDate,
+		trade.SyncStatus, trade.RawData)
+	if err != nil {
+		return err
+	}
+	id, _ := result.LastInsertId()
+	trade.ID = int(id)
+	return nil
+}
+
+func (d *Database) GetSyncedTrades(brokerID int, limit int) ([]SyncedTrade, error) {
+	query := `SELECT id, broker_id, broker_trade_id, local_trade_id, symbol, trade_type,
+			  quantity, price, trade_date, sync_status, raw_data, created_at
+			  FROM synced_trades WHERE broker_id = ? ORDER BY trade_date DESC LIMIT ?`
+	
+	rows, err := d.DB.Query(query, brokerID, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var trades []SyncedTrade
+	for rows.Next() {
+		var trade SyncedTrade
+		var localTradeID sql.NullInt64
+		
+		err := rows.Scan(&trade.ID, &trade.BrokerID, &trade.BrokerTradeID, &localTradeID,
+			&trade.Symbol, &trade.TradeType, &trade.Quantity, &trade.Price, &trade.TradeDate,
+			&trade.SyncStatus, &trade.RawData, &trade.CreatedAt)
+		if err != nil {
+			return nil, err
+		}
+		
+		if localTradeID.Valid {
+			id := int(localTradeID.Int64)
+			trade.LocalTradeID = &id
+		}
+		
+		trades = append(trades, trade)
+	}
+	return trades, nil
+}
+
+func (d *Database) UpdateSyncedTradeLocalID(syncedTradeID, localTradeID int) error {
+	query := `UPDATE synced_trades SET local_trade_id = ?, sync_status = 'SYNCED' WHERE id = ?`
+	_, err := d.DB.Exec(query, localTradeID, syncedTradeID)
+	return err
+}
+
+func (d *Database) CheckBrokerTradeExists(brokerTradeID string) (bool, error) {
+	var count int
+	query := `SELECT COUNT(*) FROM synced_trades WHERE broker_trade_id = ?`
+	err := d.DB.QueryRow(query, brokerTradeID).Scan(&count)
+	return count > 0, err
 }
 
 // Made with Bob

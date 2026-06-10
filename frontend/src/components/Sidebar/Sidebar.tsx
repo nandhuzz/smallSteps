@@ -12,6 +12,7 @@ const Sidebar = () => {
         { path: '/tasks', icon: '📝', label: 'Tasks' },
         { path: '/goals', icon: '🎯', label: 'Goals' },
         { path: '/news', icon: '📰', label: 'Market News' },
+        { path: '/broker', icon: '🔗', label: 'Broker' },
         { path: '/logs', icon: '📋', label: 'Logs' },
         { path: '/settings', icon: '⚙️', label: 'Settings' },
     ];

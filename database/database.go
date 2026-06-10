@@ -147,6 +147,40 @@ func (d *Database) createTables() error {
 		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 	);
 
+	CREATE TABLE IF NOT EXISTS broker_config (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		broker_name TEXT NOT NULL, -- UPSTOX, ZERODHA, etc.
+		api_key TEXT,
+		api_secret TEXT,
+		access_token TEXT,
+		refresh_token TEXT,
+		token_expiry DATETIME,
+		is_active BOOLEAN DEFAULT 0,
+		auto_sync_trades BOOLEAN DEFAULT 0,
+		auto_sync_positions BOOLEAN DEFAULT 0,
+		sync_interval INTEGER DEFAULT 300, -- seconds
+		last_sync DATETIME,
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+	);
+
+	CREATE TABLE IF NOT EXISTS synced_trades (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		broker_id INTEGER NOT NULL,
+		broker_trade_id TEXT UNIQUE NOT NULL,
+		local_trade_id INTEGER,
+		symbol TEXT NOT NULL,
+		trade_type TEXT NOT NULL,
+		quantity INTEGER NOT NULL,
+		price REAL NOT NULL,
+		trade_date DATETIME NOT NULL,
+		sync_status TEXT DEFAULT 'SYNCED', -- SYNCED, PENDING, ERROR
+		raw_data TEXT, -- JSON data from broker
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		FOREIGN KEY (broker_id) REFERENCES broker_config(id),
+		FOREIGN KEY (local_trade_id) REFERENCES trades(id)
+	);
+
 	-- Insert default settings if not exists
 	INSERT OR IGNORE INTO trading_settings (id, max_trades_per_day, max_loss_per_day, max_loss_per_trade)
 	VALUES (1, 5, 5000, 1000);
@@ -325,6 +359,40 @@ type TradingSettings struct {
 	MaxLossPerDay    float64   `json:"max_loss_per_day"`
 	MaxLossPerTrade  float64   `json:"max_loss_per_trade"`
 	UpdatedAt        time.Time `json:"updated_at"`
+}
+
+// BrokerConfig represents broker API configuration
+type BrokerConfig struct {
+	ID                 int        `json:"id"`
+	BrokerName         string     `json:"broker_name"`
+	APIKey             string     `json:"api_key"`
+	APISecret          string     `json:"api_secret"`
+	AccessToken        string     `json:"access_token"`
+	RefreshToken       string     `json:"refresh_token"`
+	TokenExpiry        *time.Time `json:"token_expiry"`
+	IsActive           bool       `json:"is_active"`
+	AutoSyncTrades     bool       `json:"auto_sync_trades"`
+	AutoSyncPositions  bool       `json:"auto_sync_positions"`
+	SyncInterval       int        `json:"sync_interval"`
+	LastSync           *time.Time `json:"last_sync"`
+	CreatedAt          time.Time  `json:"created_at"`
+	UpdatedAt          time.Time  `json:"updated_at"`
+}
+
+// SyncedTrade represents a trade synced from broker
+type SyncedTrade struct {
+	ID             int        `json:"id"`
+	BrokerID       int        `json:"broker_id"`
+	BrokerTradeID  string     `json:"broker_trade_id"`
+	LocalTradeID   *int       `json:"local_trade_id"`
+	Symbol         string     `json:"symbol"`
+	TradeType      string     `json:"trade_type"`
+	Quantity       int        `json:"quantity"`
+	Price          float64    `json:"price"`
+	TradeDate      time.Time  `json:"trade_date"`
+	SyncStatus     string     `json:"sync_status"`
+	RawData        string     `json:"raw_data"`
+	CreatedAt      time.Time  `json:"created_at"`
 }
 
 func (d *Database) Close() error {

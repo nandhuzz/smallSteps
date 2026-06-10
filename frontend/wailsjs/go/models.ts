@@ -1,5 +1,218 @@
+export namespace broker {
+	
+	export class MarketQuote {
+	    trading_symbol: string;
+	    last_price: number;
+	    "ohlc.open": number;
+	    "ohlc.high": number;
+	    "ohlc.low": number;
+	    "ohlc.close": number;
+	    volume: number;
+	    net_change: number;
+	    change_percent: number;
+	    // Go type: time
+	    last_trade_time: any;
+	
+	    static createFrom(source: any = {}) {
+	        return new MarketQuote(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.trading_symbol = source["trading_symbol"];
+	        this.last_price = source["last_price"];
+	        this["ohlc.open"] = source["ohlc.open"];
+	        this["ohlc.high"] = source["ohlc.high"];
+	        this["ohlc.low"] = source["ohlc.low"];
+	        this["ohlc.close"] = source["ohlc.close"];
+	        this.volume = source["volume"];
+	        this.net_change = source["net_change"];
+	        this.change_percent = source["change_percent"];
+	        this.last_trade_time = this.convertValues(source["last_trade_time"], null);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class Position {
+	    trading_symbol: string;
+	    exchange: string;
+	    quantity: number;
+	    average_price: number;
+	    last_price: number;
+	    pnl: number;
+	    day_change: number;
+	    day_change_percentage: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new Position(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.trading_symbol = source["trading_symbol"];
+	        this.exchange = source["exchange"];
+	        this.quantity = source["quantity"];
+	        this.average_price = source["average_price"];
+	        this.last_price = source["last_price"];
+	        this.pnl = source["pnl"];
+	        this.day_change = source["day_change"];
+	        this.day_change_percentage = source["day_change_percentage"];
+	    }
+	}
+	export class Trade {
+	    order_id: string;
+	    trading_symbol: string;
+	    exchange: string;
+	    transaction_type: string;
+	    quantity: number;
+	    average_price: number;
+	    order_type: string;
+	    status: string;
+	    // Go type: time
+	    order_timestamp: any;
+	    product: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new Trade(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.order_id = source["order_id"];
+	        this.trading_symbol = source["trading_symbol"];
+	        this.exchange = source["exchange"];
+	        this.transaction_type = source["transaction_type"];
+	        this.quantity = source["quantity"];
+	        this.average_price = source["average_price"];
+	        this.order_type = source["order_type"];
+	        this.status = source["status"];
+	        this.order_timestamp = this.convertValues(source["order_timestamp"], null);
+	        this.product = source["product"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class UserProfile {
+	    user_id: string;
+	    user_name: string;
+	    email: string;
+	    user_type: string;
+	    broker: string;
+	    products: string[];
+	    exchanges: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new UserProfile(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.user_id = source["user_id"];
+	        this.user_name = source["user_name"];
+	        this.email = source["email"];
+	        this.user_type = source["user_type"];
+	        this.broker = source["broker"];
+	        this.products = source["products"];
+	        this.exchanges = source["exchanges"];
+	    }
+	}
+
+}
+
 export namespace database {
 	
+	export class BrokerConfig {
+	    id: number;
+	    broker_name: string;
+	    api_key: string;
+	    api_secret: string;
+	    access_token: string;
+	    refresh_token: string;
+	    // Go type: time
+	    token_expiry?: any;
+	    is_active: boolean;
+	    auto_sync_trades: boolean;
+	    auto_sync_positions: boolean;
+	    sync_interval: number;
+	    // Go type: time
+	    last_sync?: any;
+	    // Go type: time
+	    created_at: any;
+	    // Go type: time
+	    updated_at: any;
+	
+	    static createFrom(source: any = {}) {
+	        return new BrokerConfig(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.broker_name = source["broker_name"];
+	        this.api_key = source["api_key"];
+	        this.api_secret = source["api_secret"];
+	        this.access_token = source["access_token"];
+	        this.refresh_token = source["refresh_token"];
+	        this.token_expiry = this.convertValues(source["token_expiry"], null);
+	        this.is_active = source["is_active"];
+	        this.auto_sync_trades = source["auto_sync_trades"];
+	        this.auto_sync_positions = source["auto_sync_positions"];
+	        this.sync_interval = source["sync_interval"];
+	        this.last_sync = this.convertValues(source["last_sync"], null);
+	        this.created_at = this.convertValues(source["created_at"], null);
+	        this.updated_at = this.convertValues(source["updated_at"], null);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
 	export class DailyChecklist {
 	    id: number;
 	    date: string;
@@ -69,6 +282,60 @@ export namespace database {
 	        this.current_amount = source["current_amount"];
 	        this.deadline = source["deadline"];
 	        this.status = source["status"];
+	        this.created_at = this.convertValues(source["created_at"], null);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class SyncedTrade {
+	    id: number;
+	    broker_id: number;
+	    broker_trade_id: string;
+	    local_trade_id?: number;
+	    symbol: string;
+	    trade_type: string;
+	    quantity: number;
+	    price: number;
+	    // Go type: time
+	    trade_date: any;
+	    sync_status: string;
+	    raw_data: string;
+	    // Go type: time
+	    created_at: any;
+	
+	    static createFrom(source: any = {}) {
+	        return new SyncedTrade(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.broker_id = source["broker_id"];
+	        this.broker_trade_id = source["broker_trade_id"];
+	        this.local_trade_id = source["local_trade_id"];
+	        this.symbol = source["symbol"];
+	        this.trade_type = source["trade_type"];
+	        this.quantity = source["quantity"];
+	        this.price = source["price"];
+	        this.trade_date = this.convertValues(source["trade_date"], null);
+	        this.sync_status = source["sync_status"];
+	        this.raw_data = source["raw_data"];
 	        this.created_at = this.convertValues(source["created_at"], null);
 	    }
 	

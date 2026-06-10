@@ -10,6 +10,7 @@ import TradeHistory from './components/Trading/TradeHistory';
 import Tasks from './components/Tasks/Tasks';
 import Goals from './components/Goals/Goals';
 import News from './components/News/News';
+import Broker from './components/Broker/Broker';
 import Settings from './components/Settings/Settings';
 import Logs from './components/Logs/Logs';
 import Sidebar from './components/Sidebar/Sidebar';
@@ -29,6 +30,7 @@ const TradeHistoryRoute = TradeHistory as any;
 const TasksRoute = Tasks as any;
 const GoalsRoute = Goals as any;
 const NewsRoute = News as any;
+const BrokerRoute = Broker as any;
 const SettingsRoute = Settings as any;
 const LogsRoute = Logs as any;
 
@@ -85,6 +87,7 @@ export function App() {
                         <TasksRoute path="/tasks" />
                         <GoalsRoute path="/goals" />
                         <NewsRoute path="/news" />
+                        <BrokerRoute path="/broker" />
                         <SettingsRoute path="/settings" />
                         <LogsRoute path="/logs" />
                     </Router>

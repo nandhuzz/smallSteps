@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"smallSteps/broker"
 	"smallSteps/database"
 	"time"
 )
@@ -327,6 +328,296 @@ func (a *App) GetRecentLogs(limit int) ([]map[string]interface{}, error) {
 		})
 	}
 	return logs, nil
+}
+
+// Broker Configuration Methods
+func (a *App) SaveBrokerConfig(brokerName, apiKey, apiSecret string, autoSyncTrades, autoSyncPositions bool, syncInterval int) error {
+	config := &database.BrokerConfig{
+		BrokerName:        brokerName,
+		APIKey:            apiKey,
+		APISecret:         apiSecret,
+		IsActive:          false, // Will be activated after successful auth
+		AutoSyncTrades:    autoSyncTrades,
+		AutoSyncPositions: autoSyncPositions,
+		SyncInterval:      syncInterval,
+	}
+	return a.db.CreateBrokerConfig(config)
+}
+
+func (a *App) GetBrokerConfig(brokerName string) (*database.BrokerConfig, error) {
+	return a.db.GetBrokerConfig(brokerName)
+}
+
+func (a *App) GetAllBrokerConfigs() ([]database.BrokerConfig, error) {
+	return a.db.GetAllBrokerConfigs()
+}
+
+func (a *App) UpdateBrokerConfig(id int, apiKey, apiSecret string, autoSyncTrades, autoSyncPositions bool, syncInterval int) error {
+	config := &database.BrokerConfig{
+		ID:                id,
+		APIKey:            apiKey,
+		APISecret:         apiSecret,
+		AutoSyncTrades:    autoSyncTrades,
+		AutoSyncPositions: autoSyncPositions,
+		SyncInterval:      syncInterval,
+	}
+	return a.db.UpdateBrokerConfig(config)
+}
+
+func (a *App) DeleteBrokerConfig(brokerID int) error {
+	return a.db.DeleteBrokerConfig(brokerID)
+}
+
+// Upstox Integration Methods
+func (a *App) GetUpstoxAuthURL(apiKey, redirectURI string) string {
+	client := broker.NewUpstoxClient(apiKey, "", redirectURI)
+	return client.GetAuthorizationURL()
+}
+
+func (a *App) AuthorizeUpstox(brokerID int, code string) error {
+	// Get broker config
+	config, err := a.db.GetBrokerConfig("UPSTOX")
+	if err != nil {
+		return fmt.Errorf("broker config not found: %v", err)
+	}
+
+	// Create Upstox client
+	client := broker.NewUpstoxClient(config.APIKey, config.APISecret, "http://localhost:34115/callback")
+	
+	// Exchange code for token
+	tokenResp, err := client.ExchangeCodeForToken(code)
+	if err != nil {
+		return fmt.Errorf("failed to exchange code: %v", err)
+	}
+
+	// Calculate token expiry
+	expiry := time.Now().Add(time.Duration(tokenResp.ExpiresIn) * time.Second)
+
+	// Update broker config with tokens
+	err = a.db.UpdateBrokerTokens(config.ID, tokenResp.AccessToken, tokenResp.RefreshToken, &expiry)
+	if err != nil {
+		return err
+	}
+
+	a.db.LogMessage("INFO", "Upstox authorization successful", fmt.Sprintf("Broker ID: %d", brokerID))
+	return nil
+}
+
+func (a *App) SyncUpstoxTrades(brokerID int) (map[string]interface{}, error) {
+	// Get broker config
+	config, err := a.db.GetBrokerConfig("UPSTOX")
+	if err != nil {
+		return nil, fmt.Errorf("broker config not found: %v", err)
+	}
+
+	if config.AccessToken == "" {
+		return nil, fmt.Errorf("broker not authorized")
+	}
+
+	// Create Upstox client
+	client := broker.NewUpstoxClient(config.APIKey, config.APISecret, "")
+	client.AccessToken = config.AccessToken
+
+	// Fetch trades from Upstox
+	trades, err := client.GetTrades()
+	if err != nil {
+		a.db.LogMessage("ERROR", "Failed to sync Upstox trades", err.Error())
+		return nil, err
+	}
+
+	syncedCount := 0
+	skippedCount := 0
+
+	// Process each trade
+	for _, trade := range trades {
+		// Check if trade already exists
+		exists, _ := a.db.CheckBrokerTradeExists(trade.OrderID)
+		if exists {
+			skippedCount++
+			continue
+		}
+
+		// Convert to synced trade
+		rawData, _ := json.Marshal(trade)
+		syncedTrade := &database.SyncedTrade{
+			BrokerID:      config.ID,
+			BrokerTradeID: trade.OrderID,
+			Symbol:        trade.Symbol,
+			TradeType:     trade.TransactionType,
+			Quantity:      trade.Quantity,
+			Price:         trade.Price,
+			TradeDate:     trade.TradeDate,
+			SyncStatus:    "SYNCED",
+			RawData:       string(rawData),
+		}
+
+		// Save synced trade
+		if err := a.db.CreateSyncedTrade(syncedTrade); err != nil {
+			a.db.LogMessage("ERROR", "Failed to save synced trade", err.Error())
+			continue
+		}
+
+		syncedCount++
+	}
+
+	// Update last sync time
+	a.db.UpdateBrokerLastSync(config.ID)
+
+	result := map[string]interface{}{
+		"synced":  syncedCount,
+		"skipped": skippedCount,
+		"total":   len(trades),
+	}
+
+	a.db.LogMessage("INFO", "Upstox trades synced", fmt.Sprintf("Synced: %d, Skipped: %d", syncedCount, skippedCount))
+	return result, nil
+}
+
+func (a *App) GetSyncedTrades(brokerID int, limit int) ([]database.SyncedTrade, error) {
+	return a.db.GetSyncedTrades(brokerID, limit)
+}
+
+func (a *App) GetUpstoxPositions(brokerID int) ([]broker.Position, error) {
+	// Get broker config
+	config, err := a.db.GetBrokerConfig("UPSTOX")
+	if err != nil {
+		return nil, fmt.Errorf("broker config not found: %v", err)
+	}
+
+	if config.AccessToken == "" {
+		return nil, fmt.Errorf("broker not authorized")
+	}
+
+	// Create Upstox client
+	client := broker.NewUpstoxClient(config.APIKey, config.APISecret, "")
+	client.AccessToken = config.AccessToken
+
+	// Fetch positions
+	positions, err := client.GetPositions()
+	if err != nil {
+		a.db.LogMessage("ERROR", "Failed to fetch Upstox positions", err.Error())
+		return nil, err
+	}
+
+	return positions, nil
+}
+
+func (a *App) GetUpstoxMarketQuote(symbol, exchange string) (*broker.MarketQuote, error) {
+	// Get broker config
+	config, err := a.db.GetBrokerConfig("UPSTOX")
+	if err != nil {
+		return nil, fmt.Errorf("broker config not found: %v", err)
+	}
+
+	if config.AccessToken == "" {
+		return nil, fmt.Errorf("broker not authorized")
+	}
+
+	// Create Upstox client
+	client := broker.NewUpstoxClient(config.APIKey, config.APISecret, "")
+	client.AccessToken = config.AccessToken
+
+	// Fetch market quote
+	quote, err := client.GetMarketQuote(symbol, exchange)
+	if err != nil {
+		return nil, err
+	}
+
+	return quote, nil
+}
+
+// Analytics Token Methods - Read-only operations using long-lived token
+func (a *App) GetPortfolioWithAnalyticsToken() ([]broker.Position, error) {
+	client := broker.NewUpstoxClientWithAnalyticsToken()
+	if client.AccessToken == "" {
+		return nil, fmt.Errorf("analytics token not configured in .env file")
+	}
+
+	positions, err := client.GetPositions()
+	if err != nil {
+		a.db.LogMessage("ERROR", "Failed to fetch portfolio with analytics token", err.Error())
+		return nil, err
+	}
+
+	a.db.LogMessage("INFO", "Portfolio fetched using analytics token", fmt.Sprintf("Found %d positions", len(positions)))
+	return positions, nil
+}
+
+func (a *App) GetTradesWithAnalyticsToken() ([]broker.Trade, error) {
+	client := broker.NewUpstoxClientWithAnalyticsToken()
+	if client.AccessToken == "" {
+		return nil, fmt.Errorf("analytics token not configured in .env file")
+	}
+
+	trades, err := client.GetTrades()
+	if err != nil {
+		a.db.LogMessage("ERROR", "Failed to fetch trades with analytics token", err.Error())
+		return nil, err
+	}
+
+	a.db.LogMessage("INFO", "Trades fetched using analytics token", fmt.Sprintf("Found %d trades", len(trades)))
+	return trades, nil
+}
+
+func (a *App) GetMarketQuoteWithAnalyticsToken(symbol, exchange string) (*broker.MarketQuote, error) {
+	client := broker.NewUpstoxClientWithAnalyticsToken()
+	if client.AccessToken == "" {
+		return nil, fmt.Errorf("analytics token not configured in .env file")
+	}
+
+	quote, err := client.GetMarketQuote(symbol, exchange)
+	if err != nil {
+		a.db.LogMessage("ERROR", "Failed to fetch market quote with analytics token", err.Error())
+		return nil, err
+	}
+
+	return quote, nil
+}
+
+func (a *App) GetUserProfileWithAnalyticsToken() (*broker.UserProfile, error) {
+	client := broker.NewUpstoxClientWithAnalyticsToken()
+	if client.AccessToken == "" {
+		return nil, fmt.Errorf("analytics token not configured in .env file")
+	}
+
+	profile, err := client.GetUserProfile()
+	if err != nil {
+		a.db.LogMessage("ERROR", "Failed to fetch user profile with analytics token", err.Error())
+		return nil, err
+	}
+
+	a.db.LogMessage("INFO", "User profile fetched using analytics token", fmt.Sprintf("User: %s", profile.UserName))
+	return profile, nil
+}
+
+func (a *App) CheckAnalyticsTokenStatus() (map[string]interface{}, error) {
+	client := broker.NewUpstoxClientWithAnalyticsToken()
+	
+	result := map[string]interface{}{
+		"configured": client.AccessToken != "",
+		"token_set":  client.AccessToken != "",
+	}
+
+	if client.AccessToken == "" {
+		result["message"] = "Analytics token not found in .env file"
+		return result, nil
+	}
+
+	// Try to fetch user profile to verify token
+	profile, err := client.GetUserProfile()
+	if err != nil {
+		result["valid"] = false
+		result["message"] = "Token is invalid or expired"
+		result["error"] = err.Error()
+		return result, nil
+	}
+
+	result["valid"] = true
+	result["message"] = "Analytics token is valid and working"
+	result["user_id"] = profile.UserID
+	result["user_name"] = profile.UserName
+	
+	return result, nil
 }
 
 // Made with Bob
