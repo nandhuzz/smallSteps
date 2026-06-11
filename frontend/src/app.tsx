@@ -15,7 +15,6 @@ import Settings from './components/Settings/Settings';
 import Logs from './components/Logs/Logs';
 import Capital from './components/Capital/Capital';
 import Sidebar from './components/Sidebar/Sidebar';
-import FloatingChecklist from './components/FloatingChecklist/FloatingChecklist';
 import { CheckOvertrading } from '../wailsjs/go/main/App';
 
 // Define route props interface
@@ -141,7 +140,6 @@ export function App() {
                         <LogsRoute path="/logs" />
                     </Router>
                 </div>
-                <FloatingChecklist />
             </div>
         </div>
     );

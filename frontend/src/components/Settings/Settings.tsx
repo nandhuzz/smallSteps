@@ -1,6 +1,6 @@
 import { h, Fragment } from 'preact';
 import { useState, useEffect } from 'preact/hooks';
-import { GetTradingSettings, UpdateTradingSettingsWithProtection } from '../../../wailsjs/go/main/App';
+import { GetTradingSettings, UpdateTradingSettingsWithProtection, GetChecklistItems, CreateChecklistItem, UpdateChecklistItem, DeleteChecklistItem } from '../../../wailsjs/go/main/App';
 import './Settings.css';
 
 interface TradingSettings {
@@ -14,6 +14,17 @@ interface TradingSettings {
     updated_at: string;
 }
 
+interface ChecklistItem {
+    id: number;
+    checklist_type: string;
+    item_key: string;
+    item_label: string;
+    item_description: string;
+    display_order: number;
+    is_active: boolean;
+    created_at: string;
+}
+
 const Settings = () => {
     const [settings, setSettings] = useState<TradingSettings | null>(null);
     const [loading, setLoading] = useState(true);
@@ -21,9 +32,19 @@ const Settings = () => {
     const [successMessage, setSuccessMessage] = useState('');
     const [errorMessage, setErrorMessage] = useState('');
     const [darkMode, setDarkMode] = useState(false);
+    
+    // Checklist management state
+    const [dailyItems, setDailyItems] = useState<ChecklistItem[]>([]);
+    const [weeklyItems, setWeeklyItems] = useState<ChecklistItem[]>([]);
+    const [showAddDaily, setShowAddDaily] = useState(false);
+    const [showAddWeekly, setShowAddWeekly] = useState(false);
+    const [editingItem, setEditingItem] = useState<ChecklistItem | null>(null);
+    const [newItemLabel, setNewItemLabel] = useState('');
+    const [newItemDescription, setNewItemDescription] = useState('');
 
     useEffect(() => {
         loadSettings();
+        loadChecklistItems();
         // Load dark mode preference
         const savedDarkMode = localStorage.getItem('darkMode') === 'true';
         setDarkMode(savedDarkMode);
@@ -53,6 +74,88 @@ const Settings = () => {
         } finally {
             setLoading(false);
         }
+    };
+
+    const loadChecklistItems = async () => {
+        try {
+            const daily = await GetChecklistItems('DAILY');
+            const weekly = await GetChecklistItems('WEEKLY');
+            setDailyItems(daily as ChecklistItem[]);
+            setWeeklyItems(weekly as ChecklistItem[]);
+        } catch (error) {
+            console.error('Error loading checklist items:', error);
+        }
+    };
+
+    const handleAddChecklistItem = async (type: string) => {
+        if (!newItemLabel.trim()) {
+            setErrorMessage('Item label is required');
+            return;
+        }
+
+        try {
+            const itemKey = newItemLabel.toLowerCase().replace(/\s+/g, '_');
+            const displayOrder = type === 'DAILY' ? dailyItems.length + 1 : weeklyItems.length + 1;
+            
+            await CreateChecklistItem(type, itemKey, newItemLabel, newItemDescription, displayOrder);
+            
+            setNewItemLabel('');
+            setNewItemDescription('');
+            setShowAddDaily(false);
+            setShowAddWeekly(false);
+            await loadChecklistItems();
+            setSuccessMessage('Checklist item added successfully!');
+            setTimeout(() => setSuccessMessage(''), 3000);
+        } catch (error) {
+            setErrorMessage('Error adding checklist item: ' + error);
+        }
+    };
+
+    const handleUpdateChecklistItem = async () => {
+        if (!editingItem || !newItemLabel.trim()) {
+            setErrorMessage('Item label is required');
+            return;
+        }
+
+        try {
+            await UpdateChecklistItem(editingItem.id, newItemLabel, newItemDescription, editingItem.display_order);
+            
+            setEditingItem(null);
+            setNewItemLabel('');
+            setNewItemDescription('');
+            await loadChecklistItems();
+            setSuccessMessage('Checklist item updated successfully!');
+            setTimeout(() => setSuccessMessage(''), 3000);
+        } catch (error) {
+            setErrorMessage('Error updating checklist item: ' + error);
+        }
+    };
+
+    const handleDeleteChecklistItem = async (itemId: number) => {
+        if (!confirm('Are you sure you want to delete this checklist item?')) return;
+
+        try {
+            await DeleteChecklistItem(itemId);
+            await loadChecklistItems();
+            setSuccessMessage('Checklist item deleted successfully!');
+            setTimeout(() => setSuccessMessage(''), 3000);
+        } catch (error) {
+            setErrorMessage('Error deleting checklist item: ' + error);
+        }
+    };
+
+    const startEditItem = (item: ChecklistItem) => {
+        setEditingItem(item);
+        setNewItemLabel(item.item_label);
+        setNewItemDescription(item.item_description);
+    };
+
+    const cancelEdit = () => {
+        setEditingItem(null);
+        setNewItemLabel('');
+        setNewItemDescription('');
+        setShowAddDaily(false);
+        setShowAddWeekly(false);
     };
 
     const handleInputChange = (field: keyof TradingSettings, value: number | boolean) => {
@@ -296,6 +399,139 @@ const Settings = () => {
                             <div className="input-hint">
                                 Switch between light and dark themes
                             </div>
+                        </div>
+                    </div>
+
+                    <div className="settings-section">
+                        <h2>📋 Checklist Configuration</h2>
+                        <p className="section-description">
+                            Manage your daily and weekly checklist items
+                        </p>
+
+                        <div className="checklist-config">
+                            <h3>Daily Checklist Items</h3>
+                            <div className="checklist-items-list">
+                                {dailyItems.map((item) => (
+                                    <div key={item.id} className="checklist-item-row">
+                                        {editingItem?.id === item.id ? (
+                                            <div className="edit-item-form">
+                                                <input
+                                                    type="text"
+                                                    value={newItemLabel}
+                                                    onChange={(e) => setNewItemLabel((e.target as HTMLInputElement).value)}
+                                                    placeholder="Item label"
+                                                />
+                                                <input
+                                                    type="text"
+                                                    value={newItemDescription}
+                                                    onChange={(e) => setNewItemDescription((e.target as HTMLInputElement).value)}
+                                                    placeholder="Description (optional)"
+                                                />
+                                                <div className="edit-actions">
+                                                    <button onClick={handleUpdateChecklistItem} className="btn-save">Save</button>
+                                                    <button onClick={cancelEdit} className="btn-cancel">Cancel</button>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <div className="item-info">
+                                                    <strong>{item.item_label}</strong>
+                                                    {item.item_description && <span className="item-desc">{item.item_description}</span>}
+                                                </div>
+                                                <div className="item-actions">
+                                                    <button onClick={() => startEditItem(item)} className="btn-edit">✏️ Edit</button>
+                                                    <button onClick={() => handleDeleteChecklistItem(item.id)} className="btn-delete">🗑️ Delete</button>
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                            
+                            {showAddDaily ? (
+                                <div className="add-item-form">
+                                    <input
+                                        type="text"
+                                        value={newItemLabel}
+                                        onChange={(e) => setNewItemLabel((e.target as HTMLInputElement).value)}
+                                        placeholder="Item label"
+                                    />
+                                    <input
+                                        type="text"
+                                        value={newItemDescription}
+                                        onChange={(e) => setNewItemDescription((e.target as HTMLInputElement).value)}
+                                        placeholder="Description (optional)"
+                                    />
+                                    <div className="add-actions">
+                                        <button onClick={() => handleAddChecklistItem('DAILY')} className="btn-save">Add</button>
+                                        <button onClick={cancelEdit} className="btn-cancel">Cancel</button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <button onClick={() => setShowAddDaily(true)} className="btn-add-item">+ Add Daily Item</button>
+                            )}
+
+                            <h3 style={{ marginTop: '30px' }}>Weekly Checklist Items</h3>
+                            <div className="checklist-items-list">
+                                {weeklyItems.map((item) => (
+                                    <div key={item.id} className="checklist-item-row">
+                                        {editingItem?.id === item.id ? (
+                                            <div className="edit-item-form">
+                                                <input
+                                                    type="text"
+                                                    value={newItemLabel}
+                                                    onChange={(e) => setNewItemLabel((e.target as HTMLInputElement).value)}
+                                                    placeholder="Item label"
+                                                />
+                                                <input
+                                                    type="text"
+                                                    value={newItemDescription}
+                                                    onChange={(e) => setNewItemDescription((e.target as HTMLInputElement).value)}
+                                                    placeholder="Description (optional)"
+                                                />
+                                                <div className="edit-actions">
+                                                    <button onClick={handleUpdateChecklistItem} className="btn-save">Save</button>
+                                                    <button onClick={cancelEdit} className="btn-cancel">Cancel</button>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <div className="item-info">
+                                                    <strong>{item.item_label}</strong>
+                                                    {item.item_description && <span className="item-desc">{item.item_description}</span>}
+                                                </div>
+                                                <div className="item-actions">
+                                                    <button onClick={() => startEditItem(item)} className="btn-edit">✏️ Edit</button>
+                                                    <button onClick={() => handleDeleteChecklistItem(item.id)} className="btn-delete">🗑️ Delete</button>
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                            
+                            {showAddWeekly ? (
+                                <div className="add-item-form">
+                                    <input
+                                        type="text"
+                                        value={newItemLabel}
+                                        onChange={(e) => setNewItemLabel((e.target as HTMLInputElement).value)}
+                                        placeholder="Item label"
+                                    />
+                                    <input
+                                        type="text"
+                                        value={newItemDescription}
+                                        onChange={(e) => setNewItemDescription((e.target as HTMLInputElement).value)}
+                                        placeholder="Description (optional)"
+                                    />
+                                    <div className="add-actions">
+                                        <button onClick={() => handleAddChecklistItem('WEEKLY')} className="btn-save">Add</button>
+                                        <button onClick={cancelEdit} className="btn-cancel">Cancel</button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <button onClick={() => setShowAddWeekly(true)} className="btn-add-item">+ Add Weekly Item</button>
+                            )}
                         </div>
                     </div>
 

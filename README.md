@@ -157,20 +157,22 @@ Database location: `C:\Users\<username>\.smallsteps\trading.db`
 - [x] Sidebar navigation
 - [x] Dashboard with charts and statistics
 - [x] Daily checklist component
+- [x] Weekly checklist implementation
+- [x] Trade entry form with validation
+- [x] Trade history with filters
+- [x] Task management interface
+- [x] Goal tracker with progress bars
+- [x] News display component
+- [x] Settings configuration page
+- [x] Logs viewer with filtering
 - [x] Overtrading detection system
 - [x] Indian market news integration
 - [x] Comprehensive logging system
 - [x] Global styling and design system
-
-### 🚧 To Be Completed
-- [ ] Weekly checklist implementation
-- [ ] Trade entry form with validation
-- [ ] Trade history with filters
-- [ ] Task management interface
-- [ ] Goal tracker with progress bars
-- [ ] News display component
-- [ ] Settings configuration page
-- [ ] Logs viewer with filtering
+- [x] **Dark mode support** 🌙
+- [x] **Unit tests for backend (Go)**
+- [x] **Integration tests**
+- [x] **Frontend tests (Vitest)**
 
 See `IMPLEMENTATION_GUIDE.md` for detailed implementation instructions.
 
@@ -290,18 +292,84 @@ This project is licensed under the MIT License.
 - [Go Documentation](https://golang.org/doc/)
 - [Preact Documentation](https://preactjs.com/)
 
+## 🧪 Testing
+
+### Backend Tests (Go)
+
+Run all backend tests:
+```bash
+# Run all tests
+go test ./...
+
+# Run tests with coverage
+go test -cover ./...
+
+# Run tests with verbose output
+go test -v ./...
+
+# Run specific test file
+go test ./database/database_test.go
+go test ./app_test.go
+go test ./integration_test.go
+```
+
+### Frontend Tests (Vitest)
+
+Run frontend tests:
+```bash
+cd frontend
+
+# Run tests
+npm test
+
+# Run tests with UI
+npm run test:ui
+
+# Run tests with coverage
+npm run test:coverage
+```
+
+**Note:** Install test dependencies first:
+```bash
+cd frontend
+npm install
+```
+
+## 🌙 Dark Mode
+
+The application now supports dark mode!
+
+### Enabling Dark Mode
+
+Dark mode can be toggled from the Settings page. The preference is saved in localStorage and persists across sessions.
+
+### Features
+- Automatic theme switching
+- CSS variables for consistent theming
+- All components support dark mode
+- Smooth transitions between themes
+- Accessible color contrast ratios
+
+### CSS Variables
+
+The app uses CSS custom properties for theming:
+- Light mode: Default colors
+- Dark mode: Activated via `.dark-mode` class on `<html>` element
+
+See `frontend/src/style.css` for all theme variables.
+
 ## 🔮 Future Enhancements
 
-- [ ] Dark mode support
 - [ ] Data export to CSV/PDF
 - [ ] Backup and restore functionality
 - [ ] Mobile companion app
 - [ ] Advanced analytics and reports
 - [ ] Trading journal with screenshots
-- [ ] Integration with broker APIs
 - [ ] Multi-user support
 - [ ] Cloud sync (optional)
 - [ ] Performance optimization
+- [ ] E2E tests with Playwright
+- [ ] CI/CD pipeline
 
 ## 📞 Support
 
