@@ -13,7 +13,9 @@ import News from './components/News/News';
 import Broker from './components/Broker/Broker';
 import Settings from './components/Settings/Settings';
 import Logs from './components/Logs/Logs';
+import Capital from './components/Capital/Capital';
 import Sidebar from './components/Sidebar/Sidebar';
+import FloatingChecklist from './components/FloatingChecklist/FloatingChecklist';
 import { CheckOvertrading } from '../wailsjs/go/main/App';
 
 // Define route props interface
@@ -33,12 +35,23 @@ const NewsRoute = News as any;
 const BrokerRoute = Broker as any;
 const SettingsRoute = Settings as any;
 const LogsRoute = Logs as any;
+const CapitalRoute = Capital as any;
 
 export function App() {
     const [overtradingWarning, setOvertradingWarning] = useState<{show: boolean, message: string}>({
         show: false,
         message: ''
     });
+    const [killSwitchChecked, setKillSwitchChecked] = useState(false);
+    const [killSwitchEnabled, setKillSwitchEnabled] = useState(false);
+
+    // Load dark mode preference on app start
+    useEffect(() => {
+        const savedDarkMode = localStorage.getItem('darkMode') === 'true';
+        if (savedDarkMode) {
+            document.documentElement.classList.add('dark-mode');
+        }
+    }, []);
 
     useEffect(() => {
         // Check for overtrading every 5 minutes
@@ -50,6 +63,7 @@ export function App() {
                         show: true,
                         message: result.message
                     });
+                    setKillSwitchChecked(false); // Reset checkbox when new warning appears
                 }
             } catch (error) {
                 console.error('Error checking overtrading:', error);
@@ -61,6 +75,18 @@ export function App() {
         return () => clearInterval(interval);
     }, []);
 
+    const handleAcknowledge = () => {
+        if (!killSwitchChecked) {
+            alert('Please check the "Enable Kill Switch" checkbox to acknowledge this warning.');
+            return;
+        }
+        setKillSwitchEnabled(true);
+        setOvertradingWarning({show: false, message: ''});
+        // Store kill switch state in localStorage
+        localStorage.setItem('killSwitchEnabled', 'true');
+        localStorage.setItem('killSwitchTime', new Date().toISOString());
+    };
+
     return (
         <div id="App">
             {overtradingWarning.show && (
@@ -68,10 +94,32 @@ export function App() {
                     <div className="warning-content">
                         <h2>⚠️ Overtrading Alert!</h2>
                         <p>{overtradingWarning.message}</p>
-                        <button onClick={() => setOvertradingWarning({show: false, message: ''})}>
-                            Acknowledge
+                        <div className="kill-switch-section">
+                            <label className="kill-switch-label">
+                                <input
+                                    type="checkbox"
+                                    checked={killSwitchChecked}
+                                    onChange={(e) => setKillSwitchChecked((e.target as HTMLInputElement).checked)}
+                                />
+                                <span>Enable Kill Switch - Stop all trading for today</span>
+                            </label>
+                            <p className="kill-switch-info">
+                                ⚠️ By checking this box, you acknowledge the warning and agree to stop trading for the day.
+                            </p>
+                        </div>
+                        <button
+                            onClick={handleAcknowledge}
+                            className={killSwitchChecked ? 'acknowledge-enabled' : 'acknowledge-disabled'}
+                        >
+                            {killSwitchChecked ? '✓ Acknowledge & Enable Kill Switch' : '⚠️ Check the box to acknowledge'}
                         </button>
                     </div>
+                </div>
+            )}
+
+            {killSwitchEnabled && (
+                <div className="kill-switch-banner">
+                    <span>🛑 Kill Switch Enabled - Trading stopped for today</span>
                 </div>
             )}
             
@@ -84,6 +132,7 @@ export function App() {
                         <WeeklyChecklistRoute path="/weekly-checklist" />
                         <TradeEntryRoute path="/trade-entry" />
                         <TradeHistoryRoute path="/trade-history" />
+                        <CapitalRoute path="/capital" />
                         <TasksRoute path="/tasks" />
                         <GoalsRoute path="/goals" />
                         <NewsRoute path="/news" />
@@ -92,6 +141,7 @@ export function App() {
                         <LogsRoute path="/logs" />
                     </Router>
                 </div>
+                <FloatingChecklist />
             </div>
         </div>
     );

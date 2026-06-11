@@ -33,6 +33,12 @@ func (a *App) startup(ctx context.Context) {
 		return
 	}
 	a.db = db
+	
+	// Initialize default checklist items if not already done
+	if err := a.db.InitializeDefaultChecklistItems(); err != nil {
+		fmt.Printf("Warning: Failed to initialize default checklist items: %v\n", err)
+	}
+	
 	a.db.LogMessage("INFO", "Application started", "")
 }
 
@@ -698,6 +704,67 @@ func (a *App) CheckAnalyticsTokenStatus() (map[string]interface{}, error) {
 	result["user_name"] = profile.UserName
 	
 	return result, nil
+}
+
+// Capital Transaction Methods
+func (a *App) AddDeposit(amount float64, notes string) (*database.CapitalTransaction, error) {
+	return a.db.AddCapitalTransaction("DEPOSIT", amount, notes)
+}
+
+func (a *App) AddWithdrawal(amount float64, notes string) (*database.CapitalTransaction, error) {
+	return a.db.AddCapitalTransaction("WITHDRAWAL", amount, notes)
+}
+
+func (a *App) GetCapitalTransactions(limit int) ([]database.CapitalTransaction, error) {
+	return a.db.GetCapitalTransactions(limit)
+}
+
+func (a *App) GetCurrentCapitalBalance() (float64, error) {
+	return a.db.GetCurrentCapitalBalance()
+}
+
+// Checklist Item Methods
+func (a *App) GetChecklistItems(checklistType string) ([]database.ChecklistItem, error) {
+	return a.db.GetChecklistItems(checklistType)
+}
+
+func (a *App) CreateChecklistItem(checklistType, itemKey, itemLabel, itemDescription string, displayOrder int) error {
+	item := &database.ChecklistItem{
+		ChecklistType:   checklistType,
+		ItemKey:         itemKey,
+		ItemLabel:       itemLabel,
+		ItemDescription: itemDescription,
+		DisplayOrder:    displayOrder,
+	}
+	return a.db.CreateChecklistItem(item)
+}
+
+func (a *App) UpdateChecklistItem(id int, itemLabel, itemDescription string, displayOrder int) error {
+	item := &database.ChecklistItem{
+		ID:              id,
+		ItemLabel:       itemLabel,
+		ItemDescription: itemDescription,
+		DisplayOrder:    displayOrder,
+	}
+	return a.db.UpdateChecklistItem(item)
+}
+
+func (a *App) DeleteChecklistItem(itemID int) error {
+	return a.db.DeleteChecklistItem(itemID)
+}
+
+// Enhanced Trading Settings with Capital Protection
+func (a *App) UpdateTradingSettingsWithProtection(maxTradesPerDay int, maxLossPerDay, maxLossPerTrade float64,
+	capitalProtectionEnabled bool, protectedCapital, minCapitalThreshold float64) error {
+	settings := &database.TradingSettings{
+		MaxTradesPerDay:          maxTradesPerDay,
+		MaxLossPerDay:            maxLossPerDay,
+		MaxLossPerTrade:          maxLossPerTrade,
+		CapitalProtectionEnabled: capitalProtectionEnabled,
+		ProtectedCapital:         protectedCapital,
+		MinCapitalThreshold:      minCapitalThreshold,
+	}
+	return a.db.UpdateTradingSettings(settings)
 }
 
 // Made with Bob

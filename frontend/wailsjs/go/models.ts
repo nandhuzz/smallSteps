@@ -213,6 +213,95 @@ export namespace database {
 		    return a;
 		}
 	}
+	export class CapitalTransaction {
+	    id: number;
+	    transaction_type: string;
+	    amount: number;
+	    balance_after: number;
+	    notes: string;
+	    // Go type: time
+	    transaction_date: any;
+	    // Go type: time
+	    created_at: any;
+	
+	    static createFrom(source: any = {}) {
+	        return new CapitalTransaction(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.transaction_type = source["transaction_type"];
+	        this.amount = source["amount"];
+	        this.balance_after = source["balance_after"];
+	        this.notes = source["notes"];
+	        this.transaction_date = this.convertValues(source["transaction_date"], null);
+	        this.created_at = this.convertValues(source["created_at"], null);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class ChecklistItem {
+	    id: number;
+	    checklist_type: string;
+	    item_key: string;
+	    item_label: string;
+	    item_description: string;
+	    display_order: number;
+	    is_active: boolean;
+	    // Go type: time
+	    created_at: any;
+	
+	    static createFrom(source: any = {}) {
+	        return new ChecklistItem(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.checklist_type = source["checklist_type"];
+	        this.item_key = source["item_key"];
+	        this.item_label = source["item_label"];
+	        this.item_description = source["item_description"];
+	        this.display_order = source["display_order"];
+	        this.is_active = source["is_active"];
+	        this.created_at = this.convertValues(source["created_at"], null);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
 	export class DailyChecklist {
 	    id: number;
 	    date: string;
@@ -476,6 +565,9 @@ export namespace database {
 	    max_trades_per_day: number;
 	    max_loss_per_day: number;
 	    max_loss_per_trade: number;
+	    capital_protection_enabled: boolean;
+	    protected_capital: number;
+	    min_capital_threshold: number;
 	    // Go type: time
 	    updated_at: any;
 	
@@ -489,6 +581,9 @@ export namespace database {
 	        this.max_trades_per_day = source["max_trades_per_day"];
 	        this.max_loss_per_day = source["max_loss_per_day"];
 	        this.max_loss_per_trade = source["max_loss_per_trade"];
+	        this.capital_protection_enabled = source["capital_protection_enabled"];
+	        this.protected_capital = source["protected_capital"];
+	        this.min_capital_threshold = source["min_capital_threshold"];
 	        this.updated_at = this.convertValues(source["updated_at"], null);
 	    }
 	

@@ -1,6 +1,6 @@
-import { h } from 'preact';
+import { h, Fragment } from 'preact';
 import { useState, useEffect } from 'preact/hooks';
-import { GetTradingSettings, UpdateTradingSettings } from '../../../wailsjs/go/main/App';
+import { GetTradingSettings, UpdateTradingSettingsWithProtection } from '../../../wailsjs/go/main/App';
 import './Settings.css';
 
 interface TradingSettings {
@@ -8,6 +8,9 @@ interface TradingSettings {
     max_trades_per_day: number;
     max_loss_per_day: number;
     max_loss_per_trade: number;
+    capital_protection_enabled: boolean;
+    protected_capital: number;
+    min_capital_threshold: number;
     updated_at: string;
 }
 
@@ -17,10 +20,28 @@ const Settings = () => {
     const [saving, setSaving] = useState(false);
     const [successMessage, setSuccessMessage] = useState('');
     const [errorMessage, setErrorMessage] = useState('');
+    const [darkMode, setDarkMode] = useState(false);
 
     useEffect(() => {
         loadSettings();
+        // Load dark mode preference
+        const savedDarkMode = localStorage.getItem('darkMode') === 'true';
+        setDarkMode(savedDarkMode);
+        if (savedDarkMode) {
+            document.documentElement.classList.add('dark-mode');
+        }
     }, []);
+
+    useEffect(() => {
+        // Apply dark mode
+        if (darkMode) {
+            document.documentElement.classList.add('dark-mode');
+            localStorage.setItem('darkMode', 'true');
+        } else {
+            document.documentElement.classList.remove('dark-mode');
+            localStorage.setItem('darkMode', 'false');
+        }
+    }, [darkMode]);
 
     const loadSettings = async () => {
         try {
@@ -34,7 +55,7 @@ const Settings = () => {
         }
     };
 
-    const handleInputChange = (field: keyof TradingSettings, value: number) => {
+    const handleInputChange = (field: keyof TradingSettings, value: number | boolean) => {
         if (!settings) return;
         setSettings(prev => prev ? { ...prev, [field]: value } : null);
     };
@@ -59,15 +80,23 @@ const Settings = () => {
             return;
         }
 
+        if (settings.capital_protection_enabled && settings.protected_capital <= 0) {
+            setErrorMessage('Protected capital must be greater than 0 when capital protection is enabled');
+            return;
+        }
+
         setSaving(true);
         setErrorMessage('');
         setSuccessMessage('');
 
         try {
-            await UpdateTradingSettings(
+            await UpdateTradingSettingsWithProtection(
                 settings.max_trades_per_day,
                 settings.max_loss_per_day,
-                settings.max_loss_per_trade
+                settings.max_loss_per_trade,
+                settings.capital_protection_enabled,
+                settings.protected_capital,
+                settings.min_capital_threshold
             );
             setSuccessMessage('Settings saved successfully!');
             setTimeout(() => setSuccessMessage(''), 3000);
@@ -85,7 +114,10 @@ const Settings = () => {
             ...prev,
             max_trades_per_day: 5,
             max_loss_per_day: 5000,
-            max_loss_per_trade: 2000
+            max_loss_per_trade: 2000,
+            capital_protection_enabled: false,
+            protected_capital: 0,
+            min_capital_threshold: 0
         } : null);
     };
 
@@ -190,6 +222,84 @@ const Settings = () => {
                     </div>
 
                     <div className="settings-section">
+                        <h2>🛡️ Capital Protection</h2>
+                        <p className="section-description">
+                            Protect a portion of your capital from trading losses
+                        </p>
+
+                        <div className="form-group">
+                            <label className="checkbox-label">
+                                <input
+                                    type="checkbox"
+                                    checked={settings.capital_protection_enabled}
+                                    onChange={(e) => handleInputChange('capital_protection_enabled', (e.target as HTMLInputElement).checked)}
+                                />
+                                <span>Enable Capital Protection</span>
+                            </label>
+                        </div>
+
+                        {settings.capital_protection_enabled && (
+                            <>
+                                <div className="form-group">
+                                    <label>
+                                        Protected Capital (₹)
+                                        <span className="label-hint">Amount of capital that cannot be used for trading</span>
+                                    </label>
+                                    <input
+                                        type="number"
+                                        value={settings.protected_capital}
+                                        onChange={(e) => handleInputChange('protected_capital', parseFloat((e.target as HTMLInputElement).value) || 0)}
+                                        min="0"
+                                        step="1000"
+                                        required
+                                    />
+                                    <div className="input-hint">
+                                        This amount will be reserved and not available for trading
+                                    </div>
+                                </div>
+
+                                <div className="form-group">
+                                    <label>
+                                        Minimum Capital Threshold (₹)
+                                        <span className="label-hint">Stop trading if capital falls below this amount</span>
+                                    </label>
+                                    <input
+                                        type="number"
+                                        value={settings.min_capital_threshold}
+                                        onChange={(e) => handleInputChange('min_capital_threshold', parseFloat((e.target as HTMLInputElement).value) || 0)}
+                                        min="0"
+                                        step="1000"
+                                    />
+                                    <div className="input-hint">
+                                        Trading will be blocked if your capital drops below this threshold
+                                    </div>
+                                </div>
+                            </>
+                        )}
+                    </div>
+
+                    <div className="settings-section">
+                        <h2>🌙 Appearance</h2>
+                        <p className="section-description">
+                            Customize the look and feel of the application
+                        </p>
+
+                        <div className="form-group">
+                            <label className="checkbox-label">
+                                <input
+                                    type="checkbox"
+                                    checked={darkMode}
+                                    onChange={(e) => setDarkMode((e.target as HTMLInputElement).checked)}
+                                />
+                                <span>Enable Dark Mode</span>
+                            </label>
+                            <div className="input-hint">
+                                Switch between light and dark themes
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="settings-section">
                         <h2>ℹ️ How It Works</h2>
                         <div className="info-box">
                             <ul>
@@ -201,6 +311,9 @@ const Settings = () => {
                                 </li>
                                 <li>
                                     <strong>Per-Trade Loss Limit:</strong> Helps you maintain proper position sizing and risk management
+                                </li>
+                                <li>
+                                    <strong>Capital Protection:</strong> Reserves a portion of your capital to prevent complete loss
                                 </li>
                                 <li>
                                     <strong>Overtrading Prevention:</strong> These limits help you avoid emotional trading and stick to your plan

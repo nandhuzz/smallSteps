@@ -144,7 +144,32 @@ func (d *Database) createTables() error {
 		max_trades_per_day INTEGER DEFAULT 5,
 		max_loss_per_day REAL DEFAULT 5000,
 		max_loss_per_trade REAL DEFAULT 1000,
+		capital_protection_enabled BOOLEAN DEFAULT 0,
+		protected_capital REAL DEFAULT 0,
+		min_capital_threshold REAL DEFAULT 0,
 		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+	);
+
+	CREATE TABLE IF NOT EXISTS capital_transactions (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		transaction_type TEXT NOT NULL, -- DEPOSIT or WITHDRAWAL
+		amount REAL NOT NULL,
+		balance_after REAL NOT NULL,
+		notes TEXT,
+		transaction_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+	);
+
+	CREATE TABLE IF NOT EXISTS checklist_items (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		checklist_type TEXT NOT NULL, -- DAILY or WEEKLY
+		item_key TEXT NOT NULL,
+		item_label TEXT NOT NULL,
+		item_description TEXT,
+		display_order INTEGER DEFAULT 0,
+		is_active BOOLEAN DEFAULT 1,
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		UNIQUE(checklist_type, item_key)
 	);
 
 	CREATE TABLE IF NOT EXISTS broker_config (
@@ -197,86 +222,39 @@ func (d *Database) createTables() error {
 
 // runMigrations adds missing columns to existing tables
 func (d *Database) runMigrations() error {
-	// Check if instrument_type column exists in trades table
-	var columnExists int
-	err := d.DB.QueryRow(`
-		SELECT COUNT(*) FROM pragma_table_info('trades')
-		WHERE name='instrument_type'
-	`).Scan(&columnExists)
-	
-	if err != nil {
-		return err
+	migrations := []struct {
+		table  string
+		column string
+		sql    string
+		desc   string
+	}{
+		{"trades", "instrument_type", "ALTER TABLE trades ADD COLUMN instrument_type TEXT DEFAULT 'EQUITY'", "Added instrument_type column to trades table"},
+		{"trades", "option_type", "ALTER TABLE trades ADD COLUMN option_type TEXT", "Added option_type column to trades table"},
+		{"trades", "strike_price", "ALTER TABLE trades ADD COLUMN strike_price REAL", "Added strike_price column to trades table"},
+		{"trades", "expiry_date", "ALTER TABLE trades ADD COLUMN expiry_date DATE", "Added expiry_date column to trades table"},
+		{"trading_settings", "capital_protection_enabled", "ALTER TABLE trading_settings ADD COLUMN capital_protection_enabled BOOLEAN DEFAULT 0", "Added capital_protection_enabled column to trading_settings table"},
+		{"trading_settings", "protected_capital", "ALTER TABLE trading_settings ADD COLUMN protected_capital REAL DEFAULT 0", "Added protected_capital column to trading_settings table"},
+		{"trading_settings", "min_capital_threshold", "ALTER TABLE trading_settings ADD COLUMN min_capital_threshold REAL DEFAULT 0", "Added min_capital_threshold column to trading_settings table"},
 	}
 
-	// Add instrument_type column if it doesn't exist
-	if columnExists == 0 {
-		_, err = d.DB.Exec(`
-			ALTER TABLE trades ADD COLUMN instrument_type TEXT DEFAULT 'EQUITY'
-		`)
+	for _, m := range migrations {
+		var columnExists int
+		err := d.DB.QueryRow(`
+			SELECT COUNT(*) FROM pragma_table_info(?)
+			WHERE name=?
+		`, m.table, m.column).Scan(&columnExists)
+		
 		if err != nil {
 			return err
 		}
-		log.Println("Migration: Added instrument_type column to trades table")
-	}
 
-	// Check if option_type column exists
-	err = d.DB.QueryRow(`
-		SELECT COUNT(*) FROM pragma_table_info('trades')
-		WHERE name='option_type'
-	`).Scan(&columnExists)
-	
-	if err != nil {
-		return err
-	}
-
-	if columnExists == 0 {
-		_, err = d.DB.Exec(`
-			ALTER TABLE trades ADD COLUMN option_type TEXT
-		`)
-		if err != nil {
-			return err
+		if columnExists == 0 {
+			_, err = d.DB.Exec(m.sql)
+			if err != nil {
+				return err
+			}
+			log.Println("Migration:", m.desc)
 		}
-		log.Println("Migration: Added option_type column to trades table")
-	}
-
-	// Check if strike_price column exists
-	err = d.DB.QueryRow(`
-		SELECT COUNT(*) FROM pragma_table_info('trades')
-		WHERE name='strike_price'
-	`).Scan(&columnExists)
-	
-	if err != nil {
-		return err
-	}
-
-	if columnExists == 0 {
-		_, err = d.DB.Exec(`
-			ALTER TABLE trades ADD COLUMN strike_price REAL
-		`)
-		if err != nil {
-			return err
-		}
-		log.Println("Migration: Added strike_price column to trades table")
-	}
-
-	// Check if expiry_date column exists
-	err = d.DB.QueryRow(`
-		SELECT COUNT(*) FROM pragma_table_info('trades')
-		WHERE name='expiry_date'
-	`).Scan(&columnExists)
-	
-	if err != nil {
-		return err
-	}
-
-	if columnExists == 0 {
-		_, err = d.DB.Exec(`
-			ALTER TABLE trades ADD COLUMN expiry_date DATE
-		`)
-		if err != nil {
-			return err
-		}
-		log.Println("Migration: Added expiry_date column to trades table")
 	}
 
 	return nil
@@ -354,11 +332,37 @@ type Goal struct {
 
 // TradingSettings represents trading limits and settings
 type TradingSettings struct {
-	ID               int       `json:"id"`
-	MaxTradesPerDay  int       `json:"max_trades_per_day"`
-	MaxLossPerDay    float64   `json:"max_loss_per_day"`
-	MaxLossPerTrade  float64   `json:"max_loss_per_trade"`
-	UpdatedAt        time.Time `json:"updated_at"`
+	ID                      int       `json:"id"`
+	MaxTradesPerDay         int       `json:"max_trades_per_day"`
+	MaxLossPerDay           float64   `json:"max_loss_per_day"`
+	MaxLossPerTrade         float64   `json:"max_loss_per_trade"`
+	CapitalProtectionEnabled bool     `json:"capital_protection_enabled"`
+	ProtectedCapital        float64   `json:"protected_capital"`
+	MinCapitalThreshold     float64   `json:"min_capital_threshold"`
+	UpdatedAt               time.Time `json:"updated_at"`
+}
+
+// CapitalTransaction represents a deposit or withdrawal
+type CapitalTransaction struct {
+	ID              int       `json:"id"`
+	TransactionType string    `json:"transaction_type"`
+	Amount          float64   `json:"amount"`
+	BalanceAfter    float64   `json:"balance_after"`
+	Notes           string    `json:"notes"`
+	TransactionDate time.Time `json:"transaction_date"`
+	CreatedAt       time.Time `json:"created_at"`
+}
+
+// ChecklistItem represents a dynamic checklist item
+type ChecklistItem struct {
+	ID              int       `json:"id"`
+	ChecklistType   string    `json:"checklist_type"`
+	ItemKey         string    `json:"item_key"`
+	ItemLabel       string    `json:"item_label"`
+	ItemDescription string    `json:"item_description"`
+	DisplayOrder    int       `json:"display_order"`
+	IsActive        bool      `json:"is_active"`
+	CreatedAt       time.Time `json:"created_at"`
 }
 
 // BrokerConfig represents broker API configuration

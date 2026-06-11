@@ -76,6 +76,36 @@ const News = () => {
                 <p>Latest Indian market updates</p>
             </div>
 
+            <div className="news-sources">
+                <h3>📌 Quick Links to News Sources</h3>
+                <div className="news-links-grid">
+                    <a href="https://pulse.zerodha.com/" target="_blank" rel="noopener noreferrer" className="news-source-link">
+                        <span className="link-icon">🔗</span>
+                        <span className="link-text">Zerodha Pulse</span>
+                    </a>
+                    <a href="https://www.moneycontrol.com/news/business/markets/" target="_blank" rel="noopener noreferrer" className="news-source-link">
+                        <span className="link-icon">🔗</span>
+                        <span className="link-text">Moneycontrol Markets</span>
+                    </a>
+                    <a href="https://economictimes.indiatimes.com/markets" target="_blank" rel="noopener noreferrer" className="news-source-link">
+                        <span className="link-icon">🔗</span>
+                        <span className="link-text">Economic Times</span>
+                    </a>
+                    <a href="https://www.business-standard.com/markets" target="_blank" rel="noopener noreferrer" className="news-source-link">
+                        <span className="link-icon">🔗</span>
+                        <span className="link-text">Business Standard</span>
+                    </a>
+                    <a href="https://www.livemint.com/market" target="_blank" rel="noopener noreferrer" className="news-source-link">
+                        <span className="link-icon">🔗</span>
+                        <span className="link-text">Mint Markets</span>
+                    </a>
+                    <a href="https://www.nseindia.com/" target="_blank" rel="noopener noreferrer" className="news-source-link">
+                        <span className="link-icon">🔗</span>
+                        <span className="link-text">NSE India</span>
+                    </a>
+                </div>
+            </div>
+
             <div className="news-controls">
                 <button
                     className="action-button action-button-primary"

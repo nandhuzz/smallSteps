@@ -9,6 +9,7 @@ const Sidebar = () => {
         { path: '/weekly-checklist', icon: '📅', label: 'Weekly Checklist' },
         { path: '/trade-entry', icon: '💹', label: 'Trade Entry' },
         { path: '/trade-history', icon: '📈', label: 'Trade History' },
+        { path: '/capital', icon: '💰', label: 'Capital' },
         { path: '/tasks', icon: '📝', label: 'Tasks' },
         { path: '/goals', icon: '🎯', label: 'Goals' },
         { path: '/news', icon: '📰', label: 'Market News' },

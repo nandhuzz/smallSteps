@@ -4,6 +4,10 @@ import {database} from '../models';
 import {main} from '../models';
 import {broker} from '../models';
 
+export function AddDeposit(arg1:number,arg2:string):Promise<database.CapitalTransaction>;
+
+export function AddWithdrawal(arg1:number,arg2:string):Promise<database.CapitalTransaction>;
+
 export function AuthorizeUpstox(arg1:number,arg2:string):Promise<void>;
 
 export function CheckAnalyticsTokenStatus():Promise<Record<string, any>>;
@@ -14,6 +18,8 @@ export function CloseTrade(arg1:number,arg2:number,arg3:string):Promise<void>;
 
 export function ContributeToGoal(arg1:number,arg2:number,arg3:number):Promise<void>;
 
+export function CreateChecklistItem(arg1:string,arg2:string,arg3:string,arg4:string,arg5:number):Promise<void>;
+
 export function CreateGoal(arg1:string,arg2:number,arg3:any):Promise<void>;
 
 export function CreateTask(arg1:string,arg2:string,arg3:string,arg4:any):Promise<void>;
@@ -21,6 +27,8 @@ export function CreateTask(arg1:string,arg2:string,arg3:string,arg4:any):Promise
 export function CreateTrade(arg1:string,arg2:string,arg3:number,arg4:number,arg5:number,arg6:number,arg7:string,arg8:string,arg9:string,arg10:string,arg11:number,arg12:string):Promise<number>;
 
 export function DeleteBrokerConfig(arg1:number):Promise<void>;
+
+export function DeleteChecklistItem(arg1:number):Promise<void>;
 
 export function DeleteGoal(arg1:number):Promise<void>;
 
@@ -31,6 +39,12 @@ export function DeleteTrade(arg1:number):Promise<void>;
 export function GetAllBrokerConfigs():Promise<Array<database.BrokerConfig>>;
 
 export function GetBrokerConfig(arg1:string):Promise<database.BrokerConfig>;
+
+export function GetCapitalTransactions(arg1:number):Promise<Array<database.CapitalTransaction>>;
+
+export function GetChecklistItems(arg1:string):Promise<Array<database.ChecklistItem>>;
+
+export function GetCurrentCapitalBalance():Promise<number>;
 
 export function GetDailyPLData(arg1:number):Promise<Array<Record<string, any>>>;
 
@@ -80,6 +94,8 @@ export function SyncUpstoxTrades(arg1:number):Promise<Record<string, any>>;
 
 export function UpdateBrokerConfig(arg1:number,arg2:string,arg3:string,arg4:boolean,arg5:boolean,arg6:number):Promise<void>;
 
+export function UpdateChecklistItem(arg1:number,arg2:string,arg3:string,arg4:number):Promise<void>;
+
 export function UpdateDailyChecklist(arg1:number,arg2:boolean,arg3:boolean,arg4:boolean,arg5:boolean,arg6:boolean,arg7:boolean):Promise<void>;
 
 export function UpdateGoal(arg1:number,arg2:string,arg3:number,arg4:any):Promise<void>;
@@ -89,5 +105,7 @@ export function UpdateTaskStatus(arg1:number,arg2:string):Promise<void>;
 export function UpdateTrade(arg1:number,arg2:string,arg3:string,arg4:number,arg5:number,arg6:number,arg7:number,arg8:string,arg9:string,arg10:string,arg11:string,arg12:number,arg13:string):Promise<void>;
 
 export function UpdateTradingSettings(arg1:number,arg2:number,arg3:number):Promise<void>;
+
+export function UpdateTradingSettingsWithProtection(arg1:number,arg2:number,arg3:number,arg4:boolean,arg5:number,arg6:number):Promise<void>;
 
 export function UpdateWeeklyChecklist(arg1:number,arg2:boolean,arg3:boolean,arg4:boolean,arg5:string):Promise<void>;

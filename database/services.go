@@ -701,4 +701,180 @@ func (d *Database) CheckBrokerTradeExists(brokerTradeID string) (bool, error) {
 	return count > 0, err
 }
 
+// Capital Transaction Services
+func (d *Database) AddCapitalTransaction(transactionType string, amount float64, notes string) (*CapitalTransaction, error) {
+	// Get current balance
+	var currentBalance float64
+	err := d.DB.QueryRow(`
+		SELECT COALESCE(balance_after, 0) FROM capital_transactions
+		ORDER BY transaction_date DESC LIMIT 1
+	`).Scan(&currentBalance)
+	
+	if err != nil && err != sql.ErrNoRows {
+		return nil, err
+	}
+
+	// Calculate new balance
+	var balanceAfter float64
+	if transactionType == "DEPOSIT" {
+		balanceAfter = currentBalance + amount
+	} else if transactionType == "WITHDRAWAL" {
+		balanceAfter = currentBalance - amount
+	} else {
+		return nil, fmt.Errorf("invalid transaction type: %s", transactionType)
+	}
+
+	// Insert transaction
+	query := `INSERT INTO capital_transactions (transaction_type, amount, balance_after, notes)
+			  VALUES (?, ?, ?, ?)`
+	result, err := d.DB.Exec(query, transactionType, amount, balanceAfter, notes)
+	if err != nil {
+		return nil, err
+	}
+
+	id, _ := result.LastInsertId()
+	
+	transaction := &CapitalTransaction{
+		ID:              int(id),
+		TransactionType: transactionType,
+		Amount:          amount,
+		BalanceAfter:    balanceAfter,
+		Notes:           notes,
+		TransactionDate: time.Now(),
+		CreatedAt:       time.Now(),
+	}
+
+	d.LogMessage("INFO", fmt.Sprintf("Capital %s: %.2f", transactionType, amount),
+		fmt.Sprintf("New balance: %.2f", balanceAfter))
+	
+	return transaction, nil
+}
+
+func (d *Database) GetCapitalTransactions(limit int) ([]CapitalTransaction, error) {
+	query := `SELECT id, transaction_type, amount, balance_after, COALESCE(notes, ''),
+			  transaction_date, created_at FROM capital_transactions
+			  ORDER BY transaction_date DESC LIMIT ?`
+	
+	rows, err := d.DB.Query(query, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var transactions []CapitalTransaction
+	for rows.Next() {
+		var t CapitalTransaction
+		err := rows.Scan(&t.ID, &t.TransactionType, &t.Amount, &t.BalanceAfter,
+			&t.Notes, &t.TransactionDate, &t.CreatedAt)
+		if err != nil {
+			return nil, err
+		}
+		transactions = append(transactions, t)
+	}
+	return transactions, nil
+}
+
+func (d *Database) GetCurrentCapitalBalance() (float64, error) {
+	var balance float64
+	err := d.DB.QueryRow(`
+		SELECT COALESCE(balance_after, 0) FROM capital_transactions
+		ORDER BY transaction_date DESC LIMIT 1
+	`).Scan(&balance)
+	
+	if err == sql.ErrNoRows {
+		return 0, nil
+	}
+	return balance, err
+}
+
+// Checklist Item Services
+func (d *Database) CreateChecklistItem(item *ChecklistItem) error {
+	query := `INSERT INTO checklist_items (checklist_type, item_key, item_label,
+			  item_description, display_order) VALUES (?, ?, ?, ?, ?)`
+	result, err := d.DB.Exec(query, item.ChecklistType, item.ItemKey, item.ItemLabel,
+		item.ItemDescription, item.DisplayOrder)
+	if err != nil {
+		return err
+	}
+	id, _ := result.LastInsertId()
+	item.ID = int(id)
+	return nil
+}
+
+func (d *Database) GetChecklistItems(checklistType string) ([]ChecklistItem, error) {
+	query := `SELECT id, checklist_type, item_key, item_label, item_description,
+			  display_order, is_active, created_at FROM checklist_items
+			  WHERE checklist_type = ? AND is_active = 1 ORDER BY display_order ASC`
+	
+	rows, err := d.DB.Query(query, checklistType)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var items []ChecklistItem
+	for rows.Next() {
+		var item ChecklistItem
+		err := rows.Scan(&item.ID, &item.ChecklistType, &item.ItemKey, &item.ItemLabel,
+			&item.ItemDescription, &item.DisplayOrder, &item.IsActive, &item.CreatedAt)
+		if err != nil {
+			return nil, err
+		}
+		items = append(items, item)
+	}
+	return items, nil
+}
+
+func (d *Database) UpdateChecklistItem(item *ChecklistItem) error {
+	query := `UPDATE checklist_items SET item_label = ?, item_description = ?,
+			  display_order = ? WHERE id = ?`
+	_, err := d.DB.Exec(query, item.ItemLabel, item.ItemDescription,
+		item.DisplayOrder, item.ID)
+	return err
+}
+
+func (d *Database) DeleteChecklistItem(itemID int) error {
+	query := `UPDATE checklist_items SET is_active = 0 WHERE id = ?`
+	_, err := d.DB.Exec(query, itemID)
+	return err
+}
+
+func (d *Database) InitializeDefaultChecklistItems() error {
+	// Check if items already exist
+	var count int
+	d.DB.QueryRow(`SELECT COUNT(*) FROM checklist_items`).Scan(&count)
+	if count > 0 {
+		return nil // Already initialized
+	}
+
+	dailyItems := []ChecklistItem{
+		{ChecklistType: "DAILY", ItemKey: "market_analysis", ItemLabel: "Market Analysis", ItemDescription: "Analyzed market trends and conditions", DisplayOrder: 1},
+		{ChecklistType: "DAILY", ItemKey: "risk_assessment", ItemLabel: "Risk Assessment", ItemDescription: "Evaluated potential risks for today", DisplayOrder: 2},
+		{ChecklistType: "DAILY", ItemKey: "trading_plan", ItemLabel: "Trading Plan", ItemDescription: "Created a clear trading plan", DisplayOrder: 3},
+		{ChecklistType: "DAILY", ItemKey: "mental_state", ItemLabel: "Mental State Check", ItemDescription: "Feeling calm and focused", DisplayOrder: 4},
+		{ChecklistType: "DAILY", ItemKey: "capital_check", ItemLabel: "Capital Check", ItemDescription: "Verified available capital", DisplayOrder: 5},
+		{ChecklistType: "DAILY", ItemKey: "news_review", ItemLabel: "News Review", ItemDescription: "Reviewed important market news", DisplayOrder: 6},
+	}
+
+	weeklyItems := []ChecklistItem{
+		{ChecklistType: "WEEKLY", ItemKey: "performance_review", ItemLabel: "Performance Review", ItemDescription: "Reviewed weekly trading performance", DisplayOrder: 1},
+		{ChecklistType: "WEEKLY", ItemKey: "strategy_analysis", ItemLabel: "Strategy Analysis", ItemDescription: "Analyzed trading strategies effectiveness", DisplayOrder: 2},
+		{ChecklistType: "WEEKLY", ItemKey: "goal_progress", ItemLabel: "Goal Progress", ItemDescription: "Checked progress towards financial goals", DisplayOrder: 3},
+	}
+
+	for _, item := range dailyItems {
+		if err := d.CreateChecklistItem(&item); err != nil {
+			return err
+		}
+	}
+
+	for _, item := range weeklyItems {
+		if err := d.CreateChecklistItem(&item); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // Made with Bob
