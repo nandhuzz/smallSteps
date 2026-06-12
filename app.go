@@ -194,6 +194,18 @@ func (a *App) DeleteTask(taskID int) error {
 	return a.db.DeleteTask(taskID)
 }
 
+func (a *App) UpdateTaskProgress(taskID int, progress int) error {
+	return a.db.UpdateTaskProgress(taskID, progress)
+}
+
+func (a *App) AddTaskLog(taskID int, logMessage string) error {
+	return a.db.AddTaskLog(taskID, logMessage)
+}
+
+func (a *App) GetTaskLogs(taskID int) ([]database.TaskLog, error) {
+	return a.db.GetTaskLogs(taskID)
+}
+
 // Goal Methods
 func (a *App) CreateGoal(title string, targetAmount float64, deadline *string) error {
 	goal := &database.Goal{

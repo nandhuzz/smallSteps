@@ -6,6 +6,10 @@ export function AddDeposit(arg1, arg2) {
   return window['go']['main']['App']['AddDeposit'](arg1, arg2);
 }
 
+export function AddTaskLog(arg1, arg2) {
+  return window['go']['main']['App']['AddTaskLog'](arg1, arg2);
+}
+
 export function AddWithdrawal(arg1, arg2) {
   return window['go']['main']['App']['AddWithdrawal'](arg1, arg2);
 }
@@ -118,6 +122,10 @@ export function GetSyncedTrades(arg1, arg2) {
   return window['go']['main']['App']['GetSyncedTrades'](arg1, arg2);
 }
 
+export function GetTaskLogs(arg1) {
+  return window['go']['main']['App']['GetTaskLogs'](arg1);
+}
+
 export function GetTasks() {
   return window['go']['main']['App']['GetTasks']();
 }
@@ -192,6 +200,10 @@ export function UpdateDailyChecklist(arg1, arg2, arg3, arg4, arg5, arg6, arg7) {
 
 export function UpdateGoal(arg1, arg2, arg3, arg4) {
   return window['go']['main']['App']['UpdateGoal'](arg1, arg2, arg3, arg4);
+}
+
+export function UpdateTaskProgress(arg1, arg2) {
+  return window['go']['main']['App']['UpdateTaskProgress'](arg1, arg2);
 }
 
 export function UpdateTaskStatus(arg1, arg2) {

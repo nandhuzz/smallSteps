@@ -106,9 +106,19 @@ func (d *Database) createTables() error {
 		description TEXT,
 		priority TEXT DEFAULT 'MEDIUM', -- LOW, MEDIUM, HIGH
 		status TEXT DEFAULT 'PENDING', -- PENDING, IN_PROGRESS, COMPLETED
+		progress INTEGER DEFAULT 0, -- Progress percentage (0-100)
 		due_date DATE,
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-		completed_at DATETIME
+		completed_at DATETIME,
+		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+	);
+
+	CREATE TABLE IF NOT EXISTS task_logs (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		task_id INTEGER NOT NULL,
+		log_message TEXT NOT NULL,
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
 	);
 
 	CREATE TABLE IF NOT EXISTS goals (
@@ -235,6 +245,9 @@ func (d *Database) runMigrations() error {
 		{"trading_settings", "capital_protection_enabled", "ALTER TABLE trading_settings ADD COLUMN capital_protection_enabled BOOLEAN DEFAULT 0", "Added capital_protection_enabled column to trading_settings table"},
 		{"trading_settings", "protected_capital", "ALTER TABLE trading_settings ADD COLUMN protected_capital REAL DEFAULT 0", "Added protected_capital column to trading_settings table"},
 		{"trading_settings", "min_capital_threshold", "ALTER TABLE trading_settings ADD COLUMN min_capital_threshold REAL DEFAULT 0", "Added min_capital_threshold column to trading_settings table"},
+		{"tasks", "progress", "ALTER TABLE tasks ADD COLUMN progress INTEGER DEFAULT 0", "Added progress column to tasks table"},
+		{"tasks", "updated_at", "ALTER TABLE tasks ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP", "Added updated_at column to tasks table"},
+		{"task_logs", "progress_snapshot", "ALTER TABLE task_logs ADD COLUMN progress_snapshot INTEGER DEFAULT 0", "Added progress_snapshot column to task_logs table"},
 	}
 
 	for _, m := range migrations {
@@ -314,9 +327,20 @@ type Task struct {
 	Description string    `json:"description"`
 	Priority    string    `json:"priority"`
 	Status      string    `json:"status"`
+	Progress    int       `json:"progress"`
 	DueDate     *string   `json:"due_date"`
 	CreatedAt   time.Time `json:"created_at"`
 	CompletedAt *time.Time `json:"completed_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
+// TaskLog represents a log entry for a task
+type TaskLog struct {
+	ID               int       `json:"id"`
+	TaskID           int       `json:"task_id"`
+	LogMessage       string    `json:"log_message"`
+	ProgressSnapshot int       `json:"progress_snapshot"`
+	CreatedAt        time.Time `json:"created_at"`
 }
 
 // Goal represents a financial goal

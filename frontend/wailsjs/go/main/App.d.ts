@@ -6,6 +6,8 @@ import {broker} from '../models';
 
 export function AddDeposit(arg1:number,arg2:string):Promise<database.CapitalTransaction>;
 
+export function AddTaskLog(arg1:number,arg2:string):Promise<void>;
+
 export function AddWithdrawal(arg1:number,arg2:string):Promise<database.CapitalTransaction>;
 
 export function AuthorizeUpstox(arg1:number,arg2:string):Promise<void>;
@@ -62,6 +64,8 @@ export function GetRecentLogs(arg1:number):Promise<Array<Record<string, any>>>;
 
 export function GetSyncedTrades(arg1:number,arg2:number):Promise<Array<database.SyncedTrade>>;
 
+export function GetTaskLogs(arg1:number):Promise<Array<database.TaskLog>>;
+
 export function GetTasks():Promise<Array<database.Task>>;
 
 export function GetThisWeekChecklist():Promise<database.WeeklyChecklist>;
@@ -99,6 +103,8 @@ export function UpdateChecklistItem(arg1:number,arg2:string,arg3:string,arg4:num
 export function UpdateDailyChecklist(arg1:number,arg2:boolean,arg3:boolean,arg4:boolean,arg5:boolean,arg6:boolean,arg7:boolean):Promise<void>;
 
 export function UpdateGoal(arg1:number,arg2:string,arg3:number,arg4:any):Promise<void>;
+
+export function UpdateTaskProgress(arg1:number,arg2:number):Promise<void>;
 
 export function UpdateTaskStatus(arg1:number,arg2:string):Promise<void>;
 

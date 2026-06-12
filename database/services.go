@@ -260,8 +260,15 @@ func (d *Database) CreateTask(task *Task) error {
 }
 
 func (d *Database) GetTasks() ([]Task, error) {
-	query := `SELECT id, title, description, priority, status, due_date, created_at, completed_at 
-			  FROM tasks WHERE status != 'COMPLETED' ORDER BY priority DESC, due_date ASC`
+	query := `SELECT id, title, description, priority, status, COALESCE(progress, 0), due_date,
+			  created_at, completed_at, updated_at
+			  FROM tasks ORDER BY
+			  CASE status
+			    WHEN 'IN_PROGRESS' THEN 1
+			    WHEN 'PENDING' THEN 2
+			    WHEN 'COMPLETED' THEN 3
+			  END,
+			  priority DESC, due_date ASC`
 	
 	rows, err := d.DB.Query(query)
 	if err != nil {
@@ -273,9 +280,9 @@ func (d *Database) GetTasks() ([]Task, error) {
 	for rows.Next() {
 		var task Task
 		var dueDate sql.NullString
-		var completedTime sql.NullTime
+		var completedTime, updatedTime sql.NullTime
 		err := rows.Scan(&task.ID, &task.Title, &task.Description, &task.Priority, &task.Status,
-			&dueDate, &task.CreatedAt, &completedTime)
+			&task.Progress, &dueDate, &task.CreatedAt, &completedTime, &updatedTime)
 		if err != nil {
 			return nil, err
 		}
@@ -285,19 +292,84 @@ func (d *Database) GetTasks() ([]Task, error) {
 		if completedTime.Valid {
 			task.CompletedAt = &completedTime.Time
 		}
+		// Use updated_at if available, otherwise use created_at
+		if updatedTime.Valid {
+			task.UpdatedAt = updatedTime.Time
+		} else {
+			task.UpdatedAt = task.CreatedAt
+		}
 		tasks = append(tasks, task)
 	}
 	return tasks, nil
 }
 
 func (d *Database) UpdateTaskStatus(taskID int, status string) error {
-	query := `UPDATE tasks SET status = ?, completed_at = ? WHERE id = ?`
+	query := `UPDATE tasks SET status = ?, completed_at = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`
 	var completedAt interface{}
 	if status == "COMPLETED" {
 		completedAt = time.Now()
 	}
 	_, err := d.DB.Exec(query, status, completedAt, taskID)
 	return err
+}
+
+func (d *Database) UpdateTaskProgress(taskID int, progress int) error {
+	if progress < 0 {
+		progress = 0
+	}
+	if progress > 100 {
+		progress = 100
+	}
+	
+	query := `UPDATE tasks SET progress = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`
+	_, err := d.DB.Exec(query, progress, taskID)
+	
+	if err == nil {
+		d.LogMessage("INFO", fmt.Sprintf("Task progress updated: ID %d, Progress: %d%%", taskID, progress), "")
+	}
+	return err
+}
+
+func (d *Database) AddTaskLog(taskID int, logMessage string) error {
+	// Get current progress
+	var currentProgress int
+	err := d.DB.QueryRow(`SELECT progress FROM tasks WHERE id = ?`, taskID).Scan(&currentProgress)
+	if err != nil {
+		return err
+	}
+	
+	// Insert log with progress snapshot
+	query := `INSERT INTO task_logs (task_id, log_message, progress_snapshot) VALUES (?, ?, ?)`
+	_, err = d.DB.Exec(query, taskID, logMessage, currentProgress)
+	
+	if err == nil {
+		// Update task's updated_at timestamp
+		d.DB.Exec(`UPDATE tasks SET updated_at = CURRENT_TIMESTAMP WHERE id = ?`, taskID)
+		d.LogMessage("INFO", fmt.Sprintf("Task log added: ID %d, Progress: %d%%", taskID, currentProgress), logMessage)
+	}
+	return err
+}
+
+func (d *Database) GetTaskLogs(taskID int) ([]TaskLog, error) {
+	query := `SELECT id, task_id, log_message, COALESCE(progress_snapshot, 0), created_at FROM task_logs
+			  WHERE task_id = ? ORDER BY created_at DESC`
+	
+	rows, err := d.DB.Query(query, taskID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var logs []TaskLog
+	for rows.Next() {
+		var log TaskLog
+		err := rows.Scan(&log.ID, &log.TaskID, &log.LogMessage, &log.ProgressSnapshot, &log.CreatedAt)
+		if err != nil {
+			return nil, err
+		}
+		logs = append(logs, log)
+	}
+	return logs, nil
 }
 
 func (d *Database) DeleteTask(taskID int) error {

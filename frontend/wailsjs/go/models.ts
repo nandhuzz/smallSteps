@@ -452,11 +452,14 @@ export namespace database {
 	    description: string;
 	    priority: string;
 	    status: string;
+	    progress: number;
 	    due_date?: string;
 	    // Go type: time
 	    created_at: any;
 	    // Go type: time
 	    completed_at?: any;
+	    // Go type: time
+	    updated_at: any;
 	
 	    static createFrom(source: any = {}) {
 	        return new Task(source);
@@ -469,9 +472,50 @@ export namespace database {
 	        this.description = source["description"];
 	        this.priority = source["priority"];
 	        this.status = source["status"];
+	        this.progress = source["progress"];
 	        this.due_date = source["due_date"];
 	        this.created_at = this.convertValues(source["created_at"], null);
 	        this.completed_at = this.convertValues(source["completed_at"], null);
+	        this.updated_at = this.convertValues(source["updated_at"], null);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class TaskLog {
+	    id: number;
+	    task_id: number;
+	    log_message: string;
+	    progress_snapshot: number;
+	    // Go type: time
+	    created_at: any;
+	
+	    static createFrom(source: any = {}) {
+	        return new TaskLog(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.task_id = source["task_id"];
+	        this.log_message = source["log_message"];
+	        this.progress_snapshot = source["progress_snapshot"];
+	        this.created_at = this.convertValues(source["created_at"], null);
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
