@@ -33,6 +33,9 @@ const Settings = () => {
     const [errorMessage, setErrorMessage] = useState('');
     const [darkMode, setDarkMode] = useState(false);
     
+    // Accordion state
+    const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
+    
     // Checklist management state
     const [dailyItems, setDailyItems] = useState<ChecklistItem[]>([]);
     const [weeklyItems, setWeeklyItems] = useState<ChecklistItem[]>([]);
@@ -158,6 +161,22 @@ const Settings = () => {
         setShowAddWeekly(false);
     };
 
+    const toggleSection = (sectionId: string) => {
+        setExpandedSections(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(sectionId)) {
+                newSet.delete(sectionId);
+            } else {
+                newSet.add(sectionId);
+            }
+            return newSet;
+        });
+    };
+
+    const isSectionExpanded = (sectionId: string) => {
+        return expandedSections.has(sectionId);
+    };
+
     const handleInputChange = (field: keyof TradingSettings, value: number | boolean) => {
         if (!settings) return;
         setSettings(prev => prev ? { ...prev, [field]: value } : null);
@@ -264,10 +283,20 @@ const Settings = () => {
             <div className="settings-card">
                 <form onSubmit={handleSave}>
                     <div className="settings-section">
-                        <h2>🔢 Trading Limits</h2>
-                        <p className="section-description">
-                            Set limits to protect yourself from overtrading and excessive losses
-                        </p>
+                        <div
+                            className="accordion-header"
+                            onClick={() => toggleSection('trading-limits')}
+                        >
+                            <h2>🔢 Trading Limits</h2>
+                            <span className={`accordion-icon ${isSectionExpanded('trading-limits') ? 'expanded' : ''}`}>
+                                ▼
+                            </span>
+                        </div>
+                        {isSectionExpanded('trading-limits') && (
+                            <div className="accordion-content">
+                                <p className="section-description">
+                                    Set limits to protect yourself from overtrading and excessive losses
+                                </p>
 
                         <div className="form-group">
                             <label>
@@ -322,13 +351,25 @@ const Settings = () => {
                                 Current: ₹{settings.max_loss_per_trade.toLocaleString('en-IN')}
                             </div>
                         </div>
+                            </div>
+                        )}
                     </div>
 
                     <div className="settings-section">
-                        <h2>🛡️ Capital Protection</h2>
-                        <p className="section-description">
-                            Protect a portion of your capital from trading losses
-                        </p>
+                        <div
+                            className="accordion-header"
+                            onClick={() => toggleSection('capital-protection')}
+                        >
+                            <h2>🛡️ Capital Protection</h2>
+                            <span className={`accordion-icon ${isSectionExpanded('capital-protection') ? 'expanded' : ''}`}>
+                                ▼
+                            </span>
+                        </div>
+                        {isSectionExpanded('capital-protection') && (
+                            <div className="accordion-content">
+                                <p className="section-description">
+                                    Protect a portion of your capital from trading losses
+                                </p>
 
                         <div className="form-group">
                             <label className="checkbox-label">
@@ -377,15 +418,27 @@ const Settings = () => {
                                         Trading will be blocked if your capital drops below this threshold
                                     </div>
                                 </div>
-                            </>
+                                </>
+                            )}
+                            </div>
                         )}
                     </div>
 
                     <div className="settings-section">
-                        <h2>🌙 Appearance</h2>
-                        <p className="section-description">
-                            Customize the look and feel of the application
-                        </p>
+                        <div
+                            className="accordion-header"
+                            onClick={() => toggleSection('appearance')}
+                        >
+                            <h2>🌙 Appearance</h2>
+                            <span className={`accordion-icon ${isSectionExpanded('appearance') ? 'expanded' : ''}`}>
+                                ▼
+                            </span>
+                        </div>
+                        {isSectionExpanded('appearance') && (
+                            <div className="accordion-content">
+                                <p className="section-description">
+                                    Customize the look and feel of the application
+                                </p>
 
                         <div className="form-group">
                             <label className="checkbox-label">
@@ -397,16 +450,28 @@ const Settings = () => {
                                 <span>Enable Dark Mode</span>
                             </label>
                             <div className="input-hint">
-                                Switch between light and dark themes
+                                    Switch between light and dark themes
+                                </div>
                             </div>
-                        </div>
+                            </div>
+                        )}
                     </div>
 
                     <div className="settings-section">
-                        <h2>📋 Checklist Configuration</h2>
-                        <p className="section-description">
-                            Manage your daily and weekly checklist items
-                        </p>
+                        <div
+                            className="accordion-header"
+                            onClick={() => toggleSection('checklist-config')}
+                        >
+                            <h2>📋 Checklist Configuration</h2>
+                            <span className={`accordion-icon ${isSectionExpanded('checklist-config') ? 'expanded' : ''}`}>
+                                ▼
+                            </span>
+                        </div>
+                        {isSectionExpanded('checklist-config') && (
+                            <div className="accordion-content">
+                                <p className="section-description">
+                                    Manage your daily and weekly checklist items
+                                </p>
 
                         <div className="checklist-config">
                             <h3>Daily Checklist Items</h3>
@@ -530,14 +595,26 @@ const Settings = () => {
                                     </div>
                                 </div>
                             ) : (
-                                <button onClick={() => setShowAddWeekly(true)} className="btn-add-item">+ Add Weekly Item</button>
-                            )}
-                        </div>
+                                    <button onClick={() => setShowAddWeekly(true)} className="btn-add-item">+ Add Weekly Item</button>
+                                )}
+                            </div>
+                            </div>
+                        )}
                     </div>
 
                     <div className="settings-section">
-                        <h2>ℹ️ How It Works</h2>
-                        <div className="info-box">
+                        <div
+                            className="accordion-header"
+                            onClick={() => toggleSection('how-it-works')}
+                        >
+                            <h2>ℹ️ How It Works</h2>
+                            <span className={`accordion-icon ${isSectionExpanded('how-it-works') ? 'expanded' : ''}`}>
+                                ▼
+                            </span>
+                        </div>
+                        {isSectionExpanded('how-it-works') && (
+                            <div className="accordion-content">
+                                <div className="info-box">
                             <ul>
                                 <li>
                                     <strong>Trade Limit:</strong> You'll receive a warning when you reach the maximum number of trades for the day
@@ -553,9 +630,11 @@ const Settings = () => {
                                 </li>
                                 <li>
                                     <strong>Overtrading Prevention:</strong> These limits help you avoid emotional trading and stick to your plan
-                                </li>
-                            </ul>
-                        </div>
+                                    </li>
+                                </ul>
+                            </div>
+                            </div>
+                        )}
                     </div>
 
                     <div className="settings-actions">
