@@ -10,7 +10,8 @@ import {
     GetUpstoxPositions,
     CheckAnalyticsTokenStatus,
     GetPortfolioWithAnalyticsToken,
-    GetTradesWithAnalyticsToken
+    GetTradesWithAnalyticsToken,
+    WaitForOAuthCode
 } from '../../../wailsjs/go/main/App';
 import './Broker.css';
 
@@ -136,12 +137,30 @@ const Broker = () => {
             return;
         }
 
+        setLoading(true);
         try {
-            const authURL = await GetUpstoxAuthURL(apiKey, 'http://localhost:34115/callback');
+            const authURL = await GetUpstoxAuthURL(apiKey, 'http://127.0.0.1:34115/callback');
             window.open(authURL, '_blank');
-            showMessage('Authorization window opened. Please complete the authorization and paste the code below.', 'info');
+            showMessage('Authorization window opened. Waiting for authorization...', 'info');
+
+            // Wait for OAuth code (60 second timeout)
+            const code = await WaitForOAuthCode(60);
+            
+            if (code) {
+                showMessage('Authorization code received! Processing...', 'info');
+                await AuthorizeUpstox(brokerConfig?.id || 0, code);
+                showMessage('Authorization successful!', 'success');
+                await loadBrokerConfig();
+            }
         } catch (error) {
-            showMessage('Error getting authorization URL: ' + error, 'error');
+            const errorMsg = String(error);
+            if (errorMsg.includes('timeout')) {
+                showMessage('Authorization timeout. Please try again or paste the code manually below.', 'error');
+            } else {
+                showMessage('Authorization failed: ' + error, 'error');
+            }
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -547,17 +566,21 @@ const Broker = () => {
                             <button
                                 className="btn btn-secondary"
                                 onClick={handleAuthorize}
+                                disabled={loading}
                             >
-                                Authorize Upstox
+                                {loading ? 'Waiting for authorization...' : 'Authorize Upstox'}
                             </button>
 
                             <div className="form-group" style={{ marginTop: '20px' }}>
-                                <label>Authorization Code</label>
+                                <label>Manual Authorization Code (Optional)</label>
+                                <p style={{ fontSize: '12px', color: '#666' }}>
+                                    Only use this if automatic authorization fails
+                                </p>
                                 <input
                                     type="text"
                                     value={authCode}
                                     onChange={(e) => setAuthCode((e.target as HTMLInputElement).value)}
-                                    placeholder="Paste authorization code here"
+                                    placeholder="Paste authorization code here if needed"
                                 />
                                 <button
                                     className="btn btn-primary"
@@ -565,7 +588,7 @@ const Broker = () => {
                                     disabled={loading || !authCode}
                                     style={{ marginTop: '10px' }}
                                 >
-                                    {loading ? 'Authorizing...' : 'Submit Code'}
+                                    {loading ? 'Authorizing...' : 'Submit Code Manually'}
                                 </button>
                             </div>
                         </div>

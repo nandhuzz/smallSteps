@@ -8,13 +8,18 @@ import (
 	"net/http"
 	"smallSteps/broker"
 	"smallSteps/database"
+	"sync"
 	"time"
 )
 
 // App struct
 type App struct {
-	ctx context.Context
-	db  *database.Database
+	ctx            context.Context
+	db             *database.Database
+	oauthServer    *http.Server
+	oauthCode      string
+	oauthCodeMutex sync.Mutex
+	oauthCodeChan  chan string
 }
 
 // NewApp creates a new App application struct
@@ -25,7 +30,8 @@ func NewApp() *App {
 // startup is called when the app starts
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
-	
+	a.oauthCodeChan = make(chan string, 1)
+
 	// Initialize database
 	db, err := database.NewDatabase()
 	if err != nil {
@@ -33,18 +39,168 @@ func (a *App) startup(ctx context.Context) {
 		return
 	}
 	a.db = db
-	
+
 	// Initialize default checklist items if not already done
 	if err := a.db.InitializeDefaultChecklistItems(); err != nil {
 		fmt.Printf("Warning: Failed to initialize default checklist items: %v\n", err)
 	}
-	
+
+	// Start OAuth callback server
+	a.startOAuthServer()
+
 	a.db.LogMessage("INFO", "Application started", "")
 }
 
 func (a *App) shutdown(ctx context.Context) {
+	// Stop OAuth server
+	if a.oauthServer != nil {
+		a.oauthServer.Shutdown(context.Background())
+	}
+
 	if a.db != nil {
 		a.db.Close()
+	}
+}
+
+// startOAuthServer starts a local HTTP server to handle OAuth callbacks
+func (a *App) startOAuthServer() {
+	mux := http.NewServeMux()
+
+	mux.HandleFunc("/callback", func(w http.ResponseWriter, r *http.Request) {
+		code := r.URL.Query().Get("code")
+		if code == "" {
+			http.Error(w, "No authorization code received", http.StatusBadRequest)
+			return
+		}
+
+		// Store the code
+		a.oauthCodeMutex.Lock()
+		a.oauthCode = code
+		a.oauthCodeMutex.Unlock()
+
+		// Send code to channel (non-blocking)
+		select {
+		case a.oauthCodeChan <- code:
+		default:
+		}
+
+		// Return success page
+		w.Header().Set("Content-Type", "text/html")
+		html := `
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Authorization Successful</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            text-align: center;
+            max-width: 500px;
+        }
+        .success-icon {
+            font-size: 64px;
+            color: #4CAF50;
+            margin-bottom: 20px;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        p {
+            color: #666;
+            line-height: 1.6;
+        }
+        .code {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+            font-family: monospace;
+            word-break: break-all;
+        }
+        .btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 20px;
+        }
+        .btn:hover {
+            background: #5568d3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="success-icon">✓</div>
+        <h1>Authorization Successful!</h1>
+        <p>Your Upstox account has been successfully connected to SmallSteps.</p>
+        <div class="code">
+            <strong>Authorization Code:</strong><br>
+            ` + code + `
+        </div>
+        <p>The authorization is being processed automatically. You can close this window and return to SmallSteps.</p>
+        <button class="btn" onclick="window.close()">Close Window</button>
+    </div>
+    <script>
+        // Auto-close after 3 seconds
+        setTimeout(function() {
+            window.close();
+        }, 3000);
+    </script>
+</body>
+</html>
+`
+		w.Write([]byte(html))
+	})
+
+	a.oauthServer = &http.Server{
+		Addr:    ":34115",
+		Handler: mux,
+	}
+
+	go func() {
+		if err := a.oauthServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			fmt.Printf("OAuth server error: %v\n", err)
+		}
+	}()
+
+	fmt.Println("OAuth callback server started on http://127.0.0.1:34115")
+}
+
+// GetOAuthCode returns the most recent OAuth code received
+func (a *App) GetOAuthCode() string {
+	a.oauthCodeMutex.Lock()
+	defer a.oauthCodeMutex.Unlock()
+	code := a.oauthCode
+	a.oauthCode = "" // Clear after reading
+	return code
+}
+
+// WaitForOAuthCode waits for an OAuth code with timeout
+func (a *App) WaitForOAuthCode(timeoutSeconds int) (string, error) {
+	timeout := time.After(time.Duration(timeoutSeconds) * time.Second)
+
+	select {
+	case code := <-a.oauthCodeChan:
+		return code, nil
+	case <-timeout:
+		return "", fmt.Errorf("timeout waiting for authorization code")
 	}
 }
 
@@ -61,7 +217,7 @@ func (a *App) CreateTrade(symbol, tradeType string, quantity int, entryPrice, br
 		Notes:         notes,
 		EmotionBefore: emotionBefore,
 	}
-	
+
 	// Set optional fields for options trading
 	if instrumentType != "" {
 		instType := instrumentType
@@ -79,7 +235,7 @@ func (a *App) CreateTrade(symbol, tradeType string, quantity int, entryPrice, br
 		expiry := expiryDate
 		trade.ExpiryDate = &expiry
 	}
-	
+
 	err := a.db.CreateTrade(trade)
 	return trade.ID, err
 }
@@ -96,7 +252,7 @@ func (a *App) UpdateTrade(tradeID int, symbol, tradeType string, quantity int, e
 		Notes:         notes,
 		EmotionBefore: emotionBefore,
 	}
-	
+
 	// Set optional fields for options trading
 	if instrumentType != "" {
 		instType := instrumentType
@@ -114,7 +270,7 @@ func (a *App) UpdateTrade(tradeID int, symbol, tradeType string, quantity int, e
 		expiry := expiryDate
 		trade.ExpiryDate = &expiry
 	}
-	
+
 	return a.db.UpdateTrade(trade)
 }
 
@@ -260,16 +416,16 @@ func (a *App) CheckOvertrading() (map[string]interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	result := map[string]interface{}{
 		"is_overtrading": isOvertrading,
 		"message":        message,
 	}
-	
+
 	if isOvertrading {
 		a.db.LogMessage("WARNING", "Overtrading detected", message)
 	}
-	
+
 	return result, nil
 }
 
@@ -299,26 +455,26 @@ type NewsArticle struct {
 func (a *App) GetIndianMarketNews() ([]NewsArticle, error) {
 	// Using NewsAPI.org - You'll need to get a free API key from https://newsapi.org/
 	// For now, returning mock data. Replace with actual API call
-	
+
 	apiKey := "YOUR_NEWS_API_KEY" // Replace with actual API key
 	url := fmt.Sprintf("https://newsapi.org/v2/everything?q=indian+stock+market+OR+nse+OR+bse+OR+sensex+OR+nifty&language=en&sortBy=publishedAt&apiKey=%s", apiKey)
-	
+
 	resp, err := http.Get(url)
 	if err != nil {
 		// Return mock data if API fails
 		return a.getMockNews(), nil
 	}
 	defer resp.Body.Close()
-	
+
 	if resp.StatusCode != 200 {
 		return a.getMockNews(), nil
 	}
-	
+
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return a.getMockNews(), nil
 	}
-	
+
 	var result struct {
 		Articles []struct {
 			Title       string `json:"title"`
@@ -330,11 +486,11 @@ func (a *App) GetIndianMarketNews() ([]NewsArticle, error) {
 			} `json:"source"`
 		} `json:"articles"`
 	}
-	
+
 	if err := json.Unmarshal(body, &result); err != nil {
 		return a.getMockNews(), nil
 	}
-	
+
 	var news []NewsArticle
 	for i, article := range result.Articles {
 		if i >= 10 { // Limit to 10 articles
@@ -348,7 +504,7 @@ func (a *App) GetIndianMarketNews() ([]NewsArticle, error) {
 			Source:      article.Source.Name,
 		})
 	}
-	
+
 	return news, nil
 }
 
@@ -381,13 +537,13 @@ func (a *App) getMockNews() []NewsArticle {
 // Get Market News from Upstox integration
 func (a *App) GetUpstoxMarketNews() ([]NewsArticle, error) {
 	client := broker.NewUpstoxClientWithAnalyticsToken()
-	
+
 	news, err := client.GetMarketNews()
 	if err != nil {
 		// Fallback to mock news
 		return a.getMockNews(), nil
 	}
-	
+
 	var articles []NewsArticle
 	for _, n := range news {
 		articles = append(articles, NewsArticle{
@@ -398,7 +554,7 @@ func (a *App) GetUpstoxMarketNews() ([]NewsArticle, error) {
 			Source:      n.Source,
 		})
 	}
-	
+
 	return articles, nil
 }
 
@@ -410,7 +566,7 @@ func (a *App) GetRecentLogs(limit int) ([]map[string]interface{}, error) {
 		return nil, err
 	}
 	defer rows.Close()
-	
+
 	var logs []map[string]interface{}
 	for rows.Next() {
 		var logType, message, details string
@@ -480,8 +636,8 @@ func (a *App) AuthorizeUpstox(brokerID int, code string) error {
 	}
 
 	// Create Upstox client
-	client := broker.NewUpstoxClient(config.APIKey, config.APISecret, "http://localhost:34115/callback")
-	
+	client := broker.NewUpstoxClient(config.APIKey, config.APISecret, "http://127.0.0.1:34115/callback")
+
 	// Exchange code for token
 	tokenResp, err := client.ExchangeCodeForToken(code)
 	if err != nil {
@@ -690,7 +846,7 @@ func (a *App) GetUserProfileWithAnalyticsToken() (*broker.UserProfile, error) {
 
 func (a *App) CheckAnalyticsTokenStatus() (map[string]interface{}, error) {
 	client := broker.NewUpstoxClientWithAnalyticsToken()
-	
+
 	result := map[string]interface{}{
 		"configured": client.AccessToken != "",
 		"token_set":  client.AccessToken != "",
@@ -714,7 +870,7 @@ func (a *App) CheckAnalyticsTokenStatus() (map[string]interface{}, error) {
 	result["message"] = "Analytics token is valid and working"
 	result["user_id"] = profile.UserID
 	result["user_name"] = profile.UserName
-	
+
 	return result, nil
 }
 
