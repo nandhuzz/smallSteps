@@ -508,7 +508,7 @@ func (d *Database) GetDailyPLData(days int) ([]map[string]interface{}, error) {
 		data = append(data, map[string]interface{}{
 			"date":          tradeDate,
 			"trade_count":   tradeCount,
-			"profit":        profit,
+			"profit":        round2(profit),
 			"loss":          round2(loss),
 			"net_pl":        round2(netPL),
 			"total_charges": totalCharges,
