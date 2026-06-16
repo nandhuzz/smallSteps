@@ -1,7 +1,9 @@
 import { h } from 'preact';
 import { useState, useEffect } from 'preact/hooks';
-import { CreateTrade, CheckOvertrading, GetTodayTrades, CloseTrade } from '../../../wailsjs/go/main/App';
+import { CreateTrade, GetTodayTrades, CloseTrade } from '../../../wailsjs/go/main/App';
 import './Trading.css';
+import {IsKillSwitchEnabledToday} from '../../app';
+
 
 interface TradeFormData {
     symbol: string;
@@ -72,14 +74,14 @@ const TradeEntry = () => {
     const [closingTrade, setClosingTrade] = useState<OpenTrade | null>(null);
     const [exitPrice, setExitPrice] = useState<number>(0);
     const [emotionAfter, setEmotionAfter] = useState<string>('Calm');
-    const [overtradingWarning, setOvertradingWarning] = useState<string>('');
+    const [overtradingWarning, setOvertradingWarning] = useState<boolean>(false);
     const [submitting, setSubmitting] = useState(false);
     const [successMessage, setSuccessMessage] = useState('');
     const [errorMessage, setErrorMessage] = useState('');
 
     useEffect(() => {
-        checkOvertradingStatus();
         loadOpenTrades();
+        setOvertradingWarning(IsKillSwitchEnabledToday())
     }, []);
 
     const loadOpenTrades = async () => {
@@ -89,17 +91,6 @@ const TradeEntry = () => {
             setOpenTrades(open);
         } catch (error) {
             console.error('Error loading open trades:', error);
-        }
-    };
-
-    const checkOvertradingStatus = async () => {
-        try {
-            const result = await CheckOvertrading();
-            if (result.is_overtrading) {
-                setOvertradingWarning(result.message);
-            }
-        } catch (error) {
-            console.error('Error checking overtrading:', error);
         }
     };
 
@@ -144,7 +135,7 @@ const TradeEntry = () => {
         }
 
         if (overtradingWarning) {
-            if (!confirm(`${overtradingWarning}\n\nAre you sure you want to continue?`)) {
+            if (!confirm(`Over trading detected! \n\nAre you sure you want to continue?`)) {
                 return;
             }
         }
@@ -200,7 +191,6 @@ const TradeEntry = () => {
 
             // Reload open trades and recheck overtrading status
             await loadOpenTrades();
-            await checkOvertradingStatus();
 
             // Clear success message after 3 seconds
             setTimeout(() => setSuccessMessage(''), 3000);
@@ -262,7 +252,7 @@ const TradeEntry = () => {
 
             {overtradingWarning && (
                 <div className="alert alert-warning">
-                    <strong>⚠️ Warning:</strong> {overtradingWarning}
+                    <strong>⚠️ Warning:</strong> {'Overtrading detected! You have exceeded your daily trade limit.'}
                 </div>
             )}
 

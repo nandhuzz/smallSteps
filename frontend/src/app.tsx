@@ -36,6 +36,22 @@ const SettingsRoute = Settings as any;
 const LogsRoute = Logs as any;
 const CapitalRoute = Capital as any;
 
+export const IsKillSwitchEnabledToday = () => {
+        const killSwitchTime = localStorage.getItem('killSwitchTime');
+        const killSwitchEnabled = localStorage.getItem('killSwitchEnabled') === 'true';
+        
+        if (!killSwitchEnabled || !killSwitchTime) {
+            return false;
+        }
+        
+        // Check if the kill switch time is today
+        const killSwitchDate = new Date(killSwitchTime);
+        const today = new Date();
+        
+        return killSwitchDate.toDateString() === today.toDateString();
+    };
+
+
 export function App() {
     const [overtradingWarning, setOvertradingWarning] = useState<{show: boolean, message: string}>({
         show: false,
@@ -44,11 +60,18 @@ export function App() {
     const [killSwitchChecked, setKillSwitchChecked] = useState(false);
     const [killSwitchEnabled, setKillSwitchEnabled] = useState(false);
 
-    // Load dark mode preference on app start
+    // Helper function to check if kill switch is enabled for today
+
+    // Load dark mode preference and kill switch state on app start
     useEffect(() => {
         const savedDarkMode = localStorage.getItem('darkMode') === 'true';
         if (savedDarkMode) {
             document.documentElement.classList.add('dark-mode');
+        }
+        
+        // Check if kill switch is enabled for today
+        if (IsKillSwitchEnabledToday()) {
+            setKillSwitchEnabled(true);
         }
     }, []);
 
@@ -56,6 +79,11 @@ export function App() {
         // Check for overtrading every 5 minutes
         const checkOvertrading = async () => {
             try {
+                // Skip overtrading check if kill switch is already enabled for today
+                if (IsKillSwitchEnabledToday()) {
+                    return;
+                }
+                
                 const result = await CheckOvertrading();
                 if (result.is_overtrading) {
                     setOvertradingWarning({
