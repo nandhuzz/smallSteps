@@ -30,8 +30,8 @@ export function CloseTrade(arg1, arg2, arg3) {
   return window['go']['main']['App']['CloseTrade'](arg1, arg2, arg3);
 }
 
-export function ContributeToGoal(arg1, arg2, arg3) {
-  return window['go']['main']['App']['ContributeToGoal'](arg1, arg2, arg3);
+export function ContributeToGoal(arg1, arg2) {
+  return window['go']['main']['App']['ContributeToGoal'](arg1, arg2);
 }
 
 export function CreateChecklistItem(arg1, arg2, arg3, arg4, arg5) {

@@ -18,7 +18,11 @@ func (d *Database) CreateTrade(trade *Trade) error {
 	}
 	id, _ := result.LastInsertId()
 	trade.ID = int(id)
-	d.LogMessage("TRADE", fmt.Sprintf("New trade created: %s %s %s", trade.TradeType, trade.InstrumentType, trade.Symbol), "")
+	instrumentType := "EQUITY"
+	if trade.InstrumentType != nil {
+		instrumentType = *trade.InstrumentType
+	}
+	d.LogMessage("TRADE", fmt.Sprintf("New trade created: %s %s %s", trade.TradeType, instrumentType, trade.Symbol), "")
 	return nil
 }
 
@@ -37,25 +41,9 @@ func (d *Database) UpdateTrade(trade *Trade) error {
 }
 
 func (d *Database) DeleteTrade(tradeID int) error {
-	tx, err := d.DB.Begin()
+	// Delete trade directly (no need to delete from goal_contributions since trade_id is removed)
+	_, err := d.DB.Exec(`DELETE FROM trades WHERE id = ?`, tradeID)
 	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-
-	// Remove from goal contributions if exists
-	_, err = tx.Exec(`DELETE FROM goal_contributions WHERE trade_id = ?`, tradeID)
-	if err != nil {
-		return err
-	}
-
-	// Delete trade
-	_, err = tx.Exec(`DELETE FROM trades WHERE id = ?`, tradeID)
-	if err != nil {
-		return err
-	}
-
-	if err := tx.Commit(); err != nil {
 		return err
 	}
 
@@ -445,16 +433,16 @@ func (d *Database) DeleteGoal(goalID int) error {
 	return tx.Commit()
 }
 
-func (d *Database) ContributeToGoal(goalID, tradeID int, amount float64) error {
+func (d *Database) ContributeToGoal(goalID int, amount float64) error {
 	tx, err := d.DB.Begin()
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
 
-	// Add contribution
-	_, err = tx.Exec(`INSERT INTO goal_contributions (goal_id, trade_id, amount) VALUES (?, ?, ?)`,
-		goalID, tradeID, amount)
+	// Add contribution (trade_id removed, only amount is required)
+	_, err = tx.Exec(`INSERT INTO goal_contributions (goal_id, amount) VALUES (?, ?)`,
+		goalID, amount)
 	if err != nil {
 		return err
 	}
@@ -504,7 +492,7 @@ func (d *Database) GetDailyPLData(days int) ([]map[string]interface{}, error) {
 		data = append(data, map[string]interface{}{
 			"date":          tradeDate,
 			"trade_count":   tradeCount,
-			"profit":        profit,
+			"profit":        round2(profit),
 			"loss":          round2(loss),
 			"net_pl":        round2(netPL),
 			"total_charges": totalCharges,

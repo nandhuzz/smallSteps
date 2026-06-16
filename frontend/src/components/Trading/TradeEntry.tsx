@@ -484,7 +484,7 @@ const TradeEntry = () => {
                                 <label>Entry Price (₹) *</label>
                                 <input
                                     type="number"
-                                    step="0.05"
+                                    step="0.01"
                                     value={formData.entryPrice || ''}
                                     onChange={(e) => handleNumericInputChange('entryPrice', (e.target as HTMLInputElement).value)}
                                     min="0.00"
@@ -604,7 +604,7 @@ const TradeEntry = () => {
                             <label>Exit Price (₹) *</label>
                             <input
                                 type="number"
-                                step="0.05"
+                                step="0.01"
                                 value={exitPrice || ''}
                                 onChange={(e) => setExitPrice(parseFloat((e.target as HTMLInputElement).value) || 0)}
                                 min="0.00"
