@@ -110,6 +110,10 @@ export function GetMonthlyStats() {
   return window['go']['main']['App']['GetMonthlyStats']();
 }
 
+export function GetOAuthCode() {
+  return window['go']['main']['App']['GetOAuthCode']();
+}
+
 export function GetPortfolioWithAnalyticsToken() {
   return window['go']['main']['App']['GetPortfolioWithAnalyticsToken']();
 }
@@ -224,4 +228,8 @@ export function UpdateTradingSettingsWithProtection(arg1, arg2, arg3, arg4, arg5
 
 export function UpdateWeeklyChecklist(arg1, arg2, arg3, arg4, arg5) {
   return window['go']['main']['App']['UpdateWeeklyChecklist'](arg1, arg2, arg3, arg4, arg5);
+}
+
+export function WaitForOAuthCode(arg1) {
+  return window['go']['main']['App']['WaitForOAuthCode'](arg1);
 }

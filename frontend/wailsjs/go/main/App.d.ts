@@ -58,6 +58,8 @@ export function GetMarketQuoteWithAnalyticsToken(arg1:string,arg2:string):Promis
 
 export function GetMonthlyStats():Promise<Record<string, any>>;
 
+export function GetOAuthCode():Promise<string>;
+
 export function GetPortfolioWithAnalyticsToken():Promise<Array<broker.Position>>;
 
 export function GetRecentLogs(arg1:number):Promise<Array<Record<string, any>>>;
@@ -115,3 +117,5 @@ export function UpdateTradingSettings(arg1:number,arg2:number,arg3:number):Promi
 export function UpdateTradingSettingsWithProtection(arg1:number,arg2:number,arg3:number,arg4:boolean,arg5:number,arg6:number):Promise<void>;
 
 export function UpdateWeeklyChecklist(arg1:number,arg2:boolean,arg3:boolean,arg4:boolean,arg5:string):Promise<void>;
+
+export function WaitForOAuthCode(arg1:number):Promise<string>;
