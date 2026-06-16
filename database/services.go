@@ -18,7 +18,11 @@ func (d *Database) CreateTrade(trade *Trade) error {
 	}
 	id, _ := result.LastInsertId()
 	trade.ID = int(id)
-	d.LogMessage("TRADE", fmt.Sprintf("New trade created: %s %s %s", trade.TradeType, trade.InstrumentType, trade.Symbol), "")
+	instrumentType := "EQUITY"
+	if trade.InstrumentType != nil {
+		instrumentType = *trade.InstrumentType
+	}
+	d.LogMessage("TRADE", fmt.Sprintf("New trade created: %s %s %s", trade.TradeType, instrumentType, trade.Symbol), "")
 	return nil
 }
 
