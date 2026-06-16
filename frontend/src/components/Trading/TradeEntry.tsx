@@ -107,6 +107,13 @@ const TradeEntry = () => {
         setFormData(prev => ({ ...prev, [field]: value }));
     };
 
+    const handleNumericInputChange = (field: keyof TradeFormData, value: string) => {
+        // Allow empty string, partial decimals like "123.", and valid numbers
+        if (value === '' || value.endsWith('.') || !isNaN(parseFloat(value))) {        
+            setFormData(prev => ({ ...prev, [field]: value === '' ? 0 : value }));
+        }
+    };
+
     const handleChecklistChange = (field: keyof PreEntryChecklist) => {
         setChecklist(prev => ({ ...prev, [field]: !prev[field] }));
     };
@@ -145,6 +152,9 @@ const TradeEntry = () => {
         setSubmitting(true);
         setErrorMessage('');
         setSuccessMessage('');
+        if (!isNaN(formData.entryPrice)){
+            formData.entryPrice = Number(formData.entryPrice);
+        }
 
         try {
             await CreateTrade(
@@ -474,10 +484,10 @@ const TradeEntry = () => {
                                 <label>Entry Price (₹) *</label>
                                 <input
                                     type="number"
-                                    step="0.01"
+                                    step="0.05"
                                     value={formData.entryPrice || ''}
-                                    onChange={(e) => handleInputChange('entryPrice', parseFloat((e.target as HTMLInputElement).value) || 0)}
-                                    min="0.01"
+                                    onChange={(e) => handleNumericInputChange('entryPrice', (e.target as HTMLInputElement).value)}
+                                    min="0.00"
                                     required
                                 />
                             </div>
@@ -594,10 +604,10 @@ const TradeEntry = () => {
                             <label>Exit Price (₹) *</label>
                             <input
                                 type="number"
-                                step="0.01"
+                                step="0.05"
                                 value={exitPrice || ''}
                                 onChange={(e) => setExitPrice(parseFloat((e.target as HTMLInputElement).value) || 0)}
-                                min="0.01"
+                                min="0.00"
                                 autoFocus
                             />
                         </div>
