@@ -2,7 +2,7 @@ import { h } from 'preact';
 import { useState, useEffect } from 'preact/hooks';
 // @ts-ignore - Recharts is designed for React but works with Preact
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { GetTodayTrades, GetMonthlyStats, CheckOvertrading, GetDailyPLData } from '../../../wailsjs/go/main/App';
+import { GetTodayTrades, GetMonthlyStats, GetDailyPLData } from '../../../wailsjs/go/main/App';
 import { database } from '../../../wailsjs/go/models';
 import './Dashboard.css';
 
@@ -30,7 +30,6 @@ const Dashboard = () => {
     const [stats, setStats] = useState<Stats | null>(null);
     const [dailyData, setDailyData] = useState<DailyData[]>([]);
     const [loading, setLoading] = useState(true);
-    const [overtradingStatus, setOvertradingStatus] = useState<any>(null);
 
     useEffect(() => {
         loadData();
@@ -40,15 +39,13 @@ const Dashboard = () => {
 
     const loadData = async () => {
         try {
-            const [trades, monthStats, overtrading, plData] = await Promise.all([
+            const [trades, monthStats, plData] = await Promise.all([
                 GetTodayTrades(),
                 GetMonthlyStats(),
-                CheckOvertrading(),
                 GetDailyPLData(30) // Last 30 days
             ]);
             setTodayTrades((trades || []) as Trade[]);
             setStats(monthStats as Stats);
-            setOvertradingStatus(overtrading);
             setDailyData((plData || []) as DailyData[]);
         } catch (error) {
             console.error('Error loading dashboard data:', error);
@@ -83,13 +80,7 @@ const Dashboard = () => {
                     day: 'numeric' 
                 })}</p>
             </div>
-
-            {overtradingStatus?.is_overtrading && (
-                <div className="alert alert-danger">
-                    <strong>⚠️ Warning:</strong> {overtradingStatus.message}
-                </div>
-            )}
-
+           
             <div className="stats-grid">
                 <div className="stat-card">
                     <div className="stat-icon">📊</div>
