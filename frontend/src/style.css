@@ -40,7 +40,6 @@
 
 html {
     background-color: rgba(27, 38, 54, 1);
-    text-align: center;
     color: white;
 }
 
@@ -62,5 +61,4 @@ body {
 
 #app {
     height: 100vh;
-    text-align: center;
 }

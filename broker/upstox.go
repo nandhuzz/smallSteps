@@ -11,9 +11,9 @@ import (
 )
 
 const (
-	UpstoxBaseURL     = "https://api.upstox.com/v2"
-	UpstoxAuthURL     = "https://api.upstox.com/v2/login/authorization/dialog"
-	UpstoxTokenURL    = "https://api.upstox.com/v2/login/authorization/token"
+	UpstoxBaseURL  = "https://api.upstox.com/v2"
+	UpstoxAuthURL  = "https://api.upstox.com/v2/login/authorization/dialog"
+	UpstoxTokenURL = "https://api.upstox.com/v2/login/authorization/token"
 )
 
 type UpstoxClient struct {
@@ -48,7 +48,6 @@ func NewUpstoxClientWithAnalyticsToken() *UpstoxClient {
 	}
 	return client
 }
-
 
 // GetAuthorizationURL generates the OAuth authorization URL
 func (c *UpstoxClient) GetAuthorizationURL() string {
@@ -115,16 +114,16 @@ func (c *UpstoxClient) ExchangeCodeForToken(code string) (*TokenResponse, error)
 
 // Trade represents a trade from Upstox
 type Trade struct {
-	OrderID       string    `json:"order_id"`
-	Symbol        string    `json:"trading_symbol"`
-	Exchange      string    `json:"exchange"`
-	TransactionType string  `json:"transaction_type"` // BUY or SELL
-	Quantity      int       `json:"quantity"`
-	Price         float64   `json:"average_price"`
-	OrderType     string    `json:"order_type"`
-	Status        string    `json:"status"`
-	TradeDate     time.Time `json:"order_timestamp"`
-	Product       string    `json:"product"`
+	OrderID         string    `json:"order_id"`
+	Symbol          string    `json:"trading_symbol"`
+	Exchange        string    `json:"exchange"`
+	TransactionType string    `json:"transaction_type"` // BUY or SELL
+	Quantity        int       `json:"quantity"`
+	Price           float64   `json:"average_price"`
+	OrderType       string    `json:"order_type"`
+	Status          string    `json:"status"`
+	TradeDate       time.Time `json:"order_timestamp"`
+	Product         string    `json:"product"`
 }
 
 // Position represents a position from Upstox
@@ -223,15 +222,15 @@ func (c *UpstoxClient) GetPositions() ([]Position, error) {
 
 // MarketQuote represents market data for a symbol
 type MarketQuote struct {
-	Symbol       string    `json:"trading_symbol"`
-	LastPrice    float64   `json:"last_price"`
-	Open         float64   `json:"ohlc.open"`
-	High         float64   `json:"ohlc.high"`
-	Low          float64   `json:"ohlc.low"`
-	Close        float64   `json:"ohlc.close"`
-	Volume       int64     `json:"volume"`
-	Change       float64   `json:"net_change"`
-	ChangePercent float64  `json:"change_percent"`
+	Symbol        string    `json:"trading_symbol"`
+	LastPrice     float64   `json:"last_price"`
+	Open          float64   `json:"ohlc.open"`
+	High          float64   `json:"ohlc.high"`
+	Low           float64   `json:"ohlc.low"`
+	Close         float64   `json:"ohlc.close"`
+	Volume        int64     `json:"volume"`
+	Change        float64   `json:"net_change"`
+	ChangePercent float64   `json:"change_percent"`
 	LastTradeTime time.Time `json:"last_trade_time"`
 }
 
@@ -285,11 +284,11 @@ func (c *UpstoxClient) GetMarketQuote(symbol, exchange string) (*MarketQuote, er
 
 // UserProfile represents user profile information
 type UserProfile struct {
-	UserID    string `json:"user_id"`
-	UserName  string `json:"user_name"`
-	Email     string `json:"email"`
-	UserType  string `json:"user_type"`
-	Broker    string `json:"broker"`
+	UserID    string   `json:"user_id"`
+	UserName  string   `json:"user_name"`
+	Email     string   `json:"email"`
+	UserType  string   `json:"user_type"`
+	Broker    string   `json:"broker"`
 	Products  []string `json:"products"`
 	Exchanges []string `json:"exchanges"`
 }
@@ -350,49 +349,8 @@ type MarketNews struct {
 func (c *UpstoxClient) GetMarketNews() ([]MarketNews, error) {
 	// For now, return mock Indian market news
 	// In production, integrate with NewsAPI, Google News API, or similar
-	news := []MarketNews{
-		{
-			Title:       "Sensex rises 500 points on positive global cues",
-			Description: "Indian stock markets opened higher today following positive trends in global markets and strong buying in banking stocks.",
-			URL:         "https://economictimes.indiatimes.com",
-			PublishedAt: time.Now().Add(-1 * time.Hour),
-			Source:      "Economic Times",
-			Category:    "Market",
-		},
-		{
-			Title:       "Nifty crosses 18,000 mark amid strong buying",
-			Description: "The Nifty 50 index crossed the 18,000 mark today driven by strong buying in banking and IT stocks.",
-			URL:         "https://moneycontrol.com",
-			PublishedAt: time.Now().Add(-2 * time.Hour),
-			Source:      "Moneycontrol",
-			Category:    "Market",
-		},
-		{
-			Title:       "RBI announces new monetary policy measures",
-			Description: "Reserve Bank of India announced new measures to control inflation and support economic growth.",
-			URL:         "https://businessstandard.com",
-			PublishedAt: time.Now().Add(-3 * time.Hour),
-			Source:      "Business Standard",
-			Category:    "Policy",
-		},
-		{
-			Title:       "FII inflows boost market sentiment",
-			Description: "Foreign institutional investors pumped in significant capital into Indian equities this week.",
-			URL:         "https://livemint.com",
-			PublishedAt: time.Now().Add(-4 * time.Hour),
-			Source:      "Mint",
-			Category:    "Market",
-		},
-		{
-			Title:       "IT sector shows strong growth momentum",
-			Description: "Major IT companies reported better-than-expected quarterly results, boosting sector outlook.",
-			URL:         "https://economictimes.indiatimes.com",
-			PublishedAt: time.Now().Add(-5 * time.Hour),
-			Source:      "Economic Times",
-			Category:    "Sector",
-		},
-	}
-	
+	news := []MarketNews{}
+
 	return news, nil
 }
 

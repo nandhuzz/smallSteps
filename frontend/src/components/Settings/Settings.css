@@ -56,19 +56,63 @@
 }
 
 .settings-section {
-    margin-bottom: 35px;
+    margin-bottom: 15px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--bg-tertiary);
 }
 
 .settings-section:last-of-type {
     margin-bottom: 0;
 }
 
-.settings-section h2 {
-    margin: 0 0 10px 0;
+.accordion-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    user-select: none;
+}
+
+.accordion-header:hover {
+    background-color: var(--bg-secondary);
+}
+
+.accordion-header h2 {
+    margin: 0;
     color: var(--text-primary);
     font-size: 20px;
-    border-bottom: 2px solid var(--success);
-    padding-bottom: 10px;
+    flex: 1;
+}
+
+.accordion-icon {
+    font-size: 14px;
+    color: var(--text-secondary);
+    transition: transform 0.3s ease;
+    display: inline-block;
+}
+
+.accordion-icon.expanded {
+    transform: rotate(180deg);
+}
+
+.accordion-content {
+    padding: 0 20px 20px 20px;
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .section-description {

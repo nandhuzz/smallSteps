@@ -97,7 +97,7 @@ func (d *Database) GetTrades(limit int) ([]Trade, error) {
 			  quantity, entry_price, COALESCE(exit_price, 0), COALESCE(profit_loss, 0),
 			  brokerage, other_charges, status, notes, emotion_before, COALESCE(emotion_after, ''), created_at
 			  FROM trades ORDER BY date DESC LIMIT ?`
-	
+
 	rows, err := d.DB.Query(query, limit)
 	if err != nil {
 		return nil, err
@@ -141,7 +141,7 @@ func (d *Database) GetTodayTrades() ([]Trade, error) {
 			  quantity, entry_price, COALESCE(exit_price, 0), COALESCE(profit_loss, 0),
 			  brokerage, other_charges, status, notes, emotion_before, COALESCE(emotion_after, ''), created_at
 			  FROM trades WHERE DATE(date) = ? ORDER BY date DESC`
-	
+
 	rows, err := d.DB.Query(query, today)
 	if err != nil {
 		return nil, err
@@ -183,11 +183,11 @@ func (d *Database) GetOrCreateDailyChecklist(date string) (*DailyChecklist, erro
 	var checklist DailyChecklist
 	query := `SELECT id, date, market_analysis, risk_assessment, trading_plan, mental_state, capital_check, news_review, created_at 
 			  FROM daily_checklist WHERE date = ?`
-	
+
 	err := d.DB.QueryRow(query, date).Scan(&checklist.ID, &checklist.Date, &checklist.MarketAnalysis,
-		&checklist.RiskAssessment, &checklist.TradingPlan, &checklist.MentalState, 
+		&checklist.RiskAssessment, &checklist.TradingPlan, &checklist.MentalState,
 		&checklist.CapitalCheck, &checklist.NewsReview, &checklist.CreatedAt)
-	
+
 	if err == sql.ErrNoRows {
 		// Create new checklist
 		insertQuery := `INSERT INTO daily_checklist (date) VALUES (?)`
@@ -201,7 +201,7 @@ func (d *Database) GetOrCreateDailyChecklist(date string) (*DailyChecklist, erro
 		checklist.CreatedAt = time.Now()
 		return &checklist, nil
 	}
-	
+
 	return &checklist, err
 }
 
@@ -218,11 +218,11 @@ func (d *Database) GetOrCreateWeeklyChecklist(weekStart string) (*WeeklyChecklis
 	var checklist WeeklyChecklist
 	query := `SELECT id, week_start, performance_review, strategy_analysis, goal_progress, 
 			  COALESCE(learning_notes, ''), created_at FROM weekly_checklist WHERE week_start = ?`
-	
-	err := d.DB.QueryRow(query, weekStart).Scan(&checklist.ID, &checklist.WeekStart, 
+
+	err := d.DB.QueryRow(query, weekStart).Scan(&checklist.ID, &checklist.WeekStart,
 		&checklist.PerformanceReview, &checklist.StrategyAnalysis, &checklist.GoalProgress,
 		&checklist.LearningNotes, &checklist.CreatedAt)
-	
+
 	if err == sql.ErrNoRows {
 		insertQuery := `INSERT INTO weekly_checklist (week_start) VALUES (?)`
 		result, err := d.DB.Exec(insertQuery, weekStart)
@@ -235,7 +235,7 @@ func (d *Database) GetOrCreateWeeklyChecklist(weekStart string) (*WeeklyChecklis
 		checklist.CreatedAt = time.Now()
 		return &checklist, nil
 	}
-	
+
 	return &checklist, err
 }
 
@@ -269,7 +269,7 @@ func (d *Database) GetTasks() ([]Task, error) {
 			    WHEN 'COMPLETED' THEN 3
 			  END,
 			  priority DESC, due_date ASC`
-	
+
 	rows, err := d.DB.Query(query)
 	if err != nil {
 		return nil, err
@@ -320,10 +320,10 @@ func (d *Database) UpdateTaskProgress(taskID int, progress int) error {
 	if progress > 100 {
 		progress = 100
 	}
-	
+
 	query := `UPDATE tasks SET progress = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`
 	_, err := d.DB.Exec(query, progress, taskID)
-	
+
 	if err == nil {
 		d.LogMessage("INFO", fmt.Sprintf("Task progress updated: ID %d, Progress: %d%%", taskID, progress), "")
 	}
@@ -337,11 +337,11 @@ func (d *Database) AddTaskLog(taskID int, logMessage string) error {
 	if err != nil {
 		return err
 	}
-	
+
 	// Insert log with progress snapshot
 	query := `INSERT INTO task_logs (task_id, log_message, progress_snapshot) VALUES (?, ?, ?)`
 	_, err = d.DB.Exec(query, taskID, logMessage, currentProgress)
-	
+
 	if err == nil {
 		// Update task's updated_at timestamp
 		d.DB.Exec(`UPDATE tasks SET updated_at = CURRENT_TIMESTAMP WHERE id = ?`, taskID)
@@ -353,7 +353,7 @@ func (d *Database) AddTaskLog(taskID int, logMessage string) error {
 func (d *Database) GetTaskLogs(taskID int) ([]TaskLog, error) {
 	query := `SELECT id, task_id, log_message, COALESCE(progress_snapshot, 0), created_at FROM task_logs
 			  WHERE task_id = ? ORDER BY created_at DESC`
-	
+
 	rows, err := d.DB.Query(query, taskID)
 	if err != nil {
 		return nil, err
@@ -393,7 +393,7 @@ func (d *Database) CreateGoal(goal *Goal) error {
 func (d *Database) GetGoals() ([]Goal, error) {
 	query := `SELECT id, title, target_amount, current_amount, deadline, status, created_at
 			  FROM goals WHERE status = 'ACTIVE' ORDER BY created_at DESC`
-	
+
 	rows, err := d.DB.Query(query)
 	if err != nil {
 		return nil, err
@@ -467,6 +467,7 @@ func (d *Database) ContributeToGoal(goalID, tradeID int, amount float64) error {
 
 	return tx.Commit()
 }
+
 // Get Daily P&L Data for graphs
 func (d *Database) GetDailyPLData(days int) ([]map[string]interface{}, error) {
 	query := `
@@ -482,7 +483,7 @@ func (d *Database) GetDailyPLData(days int) ([]map[string]interface{}, error) {
 		GROUP BY DATE(date)
 		ORDER BY DATE(date) ASC
 	`
-	
+
 	rows, err := d.DB.Query(query, days)
 	if err != nil {
 		return nil, err
@@ -494,25 +495,24 @@ func (d *Database) GetDailyPLData(days int) ([]map[string]interface{}, error) {
 		var tradeDate string
 		var tradeCount int
 		var profit, loss, netPL, totalCharges float64
-		
+
 		err := rows.Scan(&tradeDate, &tradeCount, &profit, &loss, &netPL, &totalCharges)
 		if err != nil {
 			return nil, err
 		}
-		
+
 		data = append(data, map[string]interface{}{
 			"date":          tradeDate,
 			"trade_count":   tradeCount,
 			"profit":        profit,
-			"loss":          loss,
-			"net_pl":        netPL,
+			"loss":          round2(loss),
+			"net_pl":        round2(netPL),
 			"total_charges": totalCharges,
 		})
 	}
-	
+
 	return data, nil
 }
-
 
 // Trading Statistics
 func (d *Database) GetTradingStats(startDate, endDate string) (map[string]interface{}, error) {
@@ -564,11 +564,11 @@ func (d *Database) CheckOvertrading() (bool, string, error) {
 	}
 
 	today := time.Now().Format("2006-01-02")
-	
+
 	// Check trade count
 	var tradeCount int
 	d.DB.QueryRow(`SELECT COUNT(*) FROM trades WHERE DATE(date) = ?`, today).Scan(&tradeCount)
-	
+
 	if tradeCount >= settings.MaxTradesPerDay {
 		return true, fmt.Sprintf("Maximum trades per day (%d) reached. Stop trading!", settings.MaxTradesPerDay), nil
 	}
@@ -576,7 +576,7 @@ func (d *Database) CheckOvertrading() (bool, string, error) {
 	// Check daily loss
 	var dailyLoss sql.NullFloat64
 	d.DB.QueryRow(`SELECT SUM(profit_loss) FROM trades WHERE DATE(date) = ? AND profit_loss < 0`, today).Scan(&dailyLoss)
-	
+
 	if dailyLoss.Valid && dailyLoss.Float64 < -settings.MaxLossPerDay {
 		return true, fmt.Sprintf("Maximum daily loss (%.2f) exceeded. Stop trading!", settings.MaxLossPerDay), nil
 	}
@@ -588,7 +588,7 @@ func (d *Database) GetTradingSettings() (*TradingSettings, error) {
 	var settings TradingSettings
 	err := d.DB.QueryRow(`SELECT id, max_trades_per_day, max_loss_per_day, max_loss_per_trade, updated_at 
 						  FROM trading_settings WHERE id = 1`).
-		Scan(&settings.ID, &settings.MaxTradesPerDay, &settings.MaxLossPerDay, 
+		Scan(&settings.ID, &settings.MaxTradesPerDay, &settings.MaxLossPerDay,
 			&settings.MaxLossPerTrade, &settings.UpdatedAt)
 	return &settings, err
 }
@@ -619,28 +619,28 @@ func (d *Database) CreateBrokerConfig(config *BrokerConfig) error {
 func (d *Database) GetBrokerConfig(brokerName string) (*BrokerConfig, error) {
 	var config BrokerConfig
 	var tokenExpiry, lastSync sql.NullTime
-	
+
 	query := `SELECT id, broker_name, api_key, api_secret, access_token, refresh_token,
 			  token_expiry, is_active, auto_sync_trades, auto_sync_positions, sync_interval,
 			  last_sync, created_at, updated_at
 			  FROM broker_config WHERE broker_name = ? ORDER BY id DESC LIMIT 1`
-	
+
 	err := d.DB.QueryRow(query, brokerName).Scan(&config.ID, &config.BrokerName, &config.APIKey,
 		&config.APISecret, &config.AccessToken, &config.RefreshToken, &tokenExpiry,
 		&config.IsActive, &config.AutoSyncTrades, &config.AutoSyncPositions, &config.SyncInterval,
 		&lastSync, &config.CreatedAt, &config.UpdatedAt)
-	
+
 	if err != nil {
 		return nil, err
 	}
-	
+
 	if tokenExpiry.Valid {
 		config.TokenExpiry = &tokenExpiry.Time
 	}
 	if lastSync.Valid {
 		config.LastSync = &lastSync.Time
 	}
-	
+
 	return &config, nil
 }
 
@@ -649,7 +649,7 @@ func (d *Database) GetAllBrokerConfigs() ([]BrokerConfig, error) {
 			  token_expiry, is_active, auto_sync_trades, auto_sync_positions, sync_interval,
 			  last_sync, created_at, updated_at
 			  FROM broker_config ORDER BY created_at DESC`
-	
+
 	rows, err := d.DB.Query(query)
 	if err != nil {
 		return nil, err
@@ -660,7 +660,7 @@ func (d *Database) GetAllBrokerConfigs() ([]BrokerConfig, error) {
 	for rows.Next() {
 		var config BrokerConfig
 		var tokenExpiry, lastSync sql.NullTime
-		
+
 		err := rows.Scan(&config.ID, &config.BrokerName, &config.APIKey, &config.APISecret,
 			&config.AccessToken, &config.RefreshToken, &tokenExpiry, &config.IsActive,
 			&config.AutoSyncTrades, &config.AutoSyncPositions, &config.SyncInterval,
@@ -668,14 +668,14 @@ func (d *Database) GetAllBrokerConfigs() ([]BrokerConfig, error) {
 		if err != nil {
 			return nil, err
 		}
-		
+
 		if tokenExpiry.Valid {
 			config.TokenExpiry = &tokenExpiry.Time
 		}
 		if lastSync.Valid {
 			config.LastSync = &lastSync.Time
 		}
-		
+
 		configs = append(configs, config)
 	}
 	return configs, nil
@@ -731,7 +731,7 @@ func (d *Database) GetSyncedTrades(brokerID int, limit int) ([]SyncedTrade, erro
 	query := `SELECT id, broker_id, broker_trade_id, local_trade_id, symbol, trade_type,
 			  quantity, price, trade_date, sync_status, raw_data, created_at
 			  FROM synced_trades WHERE broker_id = ? ORDER BY trade_date DESC LIMIT ?`
-	
+
 	rows, err := d.DB.Query(query, brokerID, limit)
 	if err != nil {
 		return nil, err
@@ -742,19 +742,19 @@ func (d *Database) GetSyncedTrades(brokerID int, limit int) ([]SyncedTrade, erro
 	for rows.Next() {
 		var trade SyncedTrade
 		var localTradeID sql.NullInt64
-		
+
 		err := rows.Scan(&trade.ID, &trade.BrokerID, &trade.BrokerTradeID, &localTradeID,
 			&trade.Symbol, &trade.TradeType, &trade.Quantity, &trade.Price, &trade.TradeDate,
 			&trade.SyncStatus, &trade.RawData, &trade.CreatedAt)
 		if err != nil {
 			return nil, err
 		}
-		
+
 		if localTradeID.Valid {
 			id := int(localTradeID.Int64)
 			trade.LocalTradeID = &id
 		}
-		
+
 		trades = append(trades, trade)
 	}
 	return trades, nil
@@ -781,7 +781,7 @@ func (d *Database) AddCapitalTransaction(transactionType string, amount float64,
 		SELECT COALESCE(balance_after, 0) FROM capital_transactions
 		ORDER BY transaction_date DESC LIMIT 1
 	`).Scan(&currentBalance)
-	
+
 	if err != nil && err != sql.ErrNoRows {
 		return nil, err
 	}
@@ -805,7 +805,7 @@ func (d *Database) AddCapitalTransaction(transactionType string, amount float64,
 	}
 
 	id, _ := result.LastInsertId()
-	
+
 	transaction := &CapitalTransaction{
 		ID:              int(id),
 		TransactionType: transactionType,
@@ -818,7 +818,7 @@ func (d *Database) AddCapitalTransaction(transactionType string, amount float64,
 
 	d.LogMessage("INFO", fmt.Sprintf("Capital %s: %.2f", transactionType, amount),
 		fmt.Sprintf("New balance: %.2f", balanceAfter))
-	
+
 	return transaction, nil
 }
 
@@ -826,7 +826,7 @@ func (d *Database) GetCapitalTransactions(limit int) ([]CapitalTransaction, erro
 	query := `SELECT id, transaction_type, amount, balance_after, COALESCE(notes, ''),
 			  transaction_date, created_at FROM capital_transactions
 			  ORDER BY transaction_date DESC LIMIT ?`
-	
+
 	rows, err := d.DB.Query(query, limit)
 	if err != nil {
 		return nil, err
@@ -852,7 +852,7 @@ func (d *Database) GetCurrentCapitalBalance() (float64, error) {
 		SELECT COALESCE(balance_after, 0) FROM capital_transactions
 		ORDER BY transaction_date DESC LIMIT 1
 	`).Scan(&balance)
-	
+
 	if err == sql.ErrNoRows {
 		return 0, nil
 	}
@@ -877,7 +877,7 @@ func (d *Database) GetChecklistItems(checklistType string) ([]ChecklistItem, err
 	query := `SELECT id, checklist_type, item_key, item_label, item_description,
 			  display_order, is_active, created_at FROM checklist_items
 			  WHERE checklist_type = ? AND is_active = 1 ORDER BY display_order ASC`
-	
+
 	rows, err := d.DB.Query(query, checklistType)
 	if err != nil {
 		return nil, err
