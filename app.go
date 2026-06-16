@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"html"
 	"io"
 	"net/http"
 	"smallSteps/broker"
@@ -86,6 +87,7 @@ func (a *App) startOAuthServer() {
 
 		// Return success page
 		w.Header().Set("Content-Type", "text/html")
+		escapedCode := html.EscapeString(code)
 		html := `
 <!DOCTYPE html>
 <html>
@@ -152,7 +154,7 @@ func (a *App) startOAuthServer() {
         <p>Your Upstox account has been successfully connected to SmallSteps.</p>
         <div class="code">
             <strong>Authorization Code:</strong><br>
-            ` + code + `
+            ` + escapedCode + `
         </div>
         <p>The authorization is being processed automatically. You can close this window and return to SmallSteps.</p>
         <button class="btn" onclick="window.close()">Close Window</button>
