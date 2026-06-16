@@ -1,6 +1,6 @@
 import { h } from 'preact';
 import { useState, useEffect } from 'preact/hooks';
-import { CreateGoal, GetGoals, UpdateGoal, DeleteGoal, ContributeToGoal, GetTrades } from '../../../wailsjs/go/main/App';
+import { CreateGoal, GetGoals, UpdateGoal, DeleteGoal, ContributeToGoal } from '../../../wailsjs/go/main/App';
 import './Goals.css';
 
 interface Goal {
@@ -13,17 +13,8 @@ interface Goal {
     created_at: string;
 }
 
-interface Trade {
-    id: number;
-    symbol: string;
-    profit_loss?: number;
-    status: string;
-    date: string;
-}
-
 const Goals = () => {
     const [goals, setGoals] = useState<Goal[]>([]);
-    const [trades, setTrades] = useState<Trade[]>([]);
     const [loading, setLoading] = useState(true);
     const [showAddModal, setShowAddModal] = useState(false);
     const [showEditModal, setShowEditModal] = useState(false);
@@ -41,7 +32,6 @@ const Goals = () => {
         deadline: ''
     });
     const [contribution, setContribution] = useState({
-        tradeId: 0,
         amount: 0
     });
 
@@ -51,16 +41,8 @@ const Goals = () => {
 
     const loadData = async () => {
         try {
-            const [goalsData, tradesData] = await Promise.all([
-                GetGoals(),
-                GetTrades(50)
-            ]);
+            const goalsData = await GetGoals();
             setGoals(goalsData || []);
-            // Filter only closed profitable trades
-            const profitableTrades = (tradesData || []).filter(
-                (t: Trade) => t.status === 'CLOSED' && (t.profit_loss || 0) > 0
-            );
-            setTrades(profitableTrades);
         } catch (error) {
             console.error('Error loading data:', error);
         } finally {
@@ -130,18 +112,18 @@ const Goals = () => {
 
     const handleContribute = (goal: Goal) => {
         setSelectedGoal(goal);
-        setContribution({ tradeId: 0, amount: 0 });
+        setContribution({ amount: 0 });
         setShowContributeModal(true);
     };
 
     const submitContribution = async () => {
-        if (!selectedGoal || contribution.tradeId === 0 || contribution.amount <= 0) {
-            alert('Please select a trade and enter a valid amount');
+        if (!selectedGoal || contribution.amount <= 0) {
+            alert('Please enter a valid amount');
             return;
         }
 
         try {
-            await ContributeToGoal(selectedGoal.id, contribution.tradeId, contribution.amount);
+            await ContributeToGoal(selectedGoal.id, contribution.amount);
             setShowContributeModal(false);
             setSelectedGoal(null);
             await loadData();
@@ -313,7 +295,7 @@ const Goals = () => {
                                     type="number"
                                     value={newGoal.targetAmount || ''}
                                     onChange={(e) => setNewGoal(prev => ({ ...prev, targetAmount: parseFloat((e.target as HTMLInputElement).value) || 0 }))}
-                                    min="1"
+                                    min="0"
                                     step="100"
                                     required
                                 />
@@ -369,7 +351,7 @@ const Goals = () => {
                                     type="number"
                                     value={editGoal.targetAmount || ''}
                                     onChange={(e) => setEditGoal(prev => ({ ...prev, targetAmount: parseFloat((e.target as HTMLInputElement).value) || 0 }))}
-                                    min="1"
+                                    min="0"
                                     step="100"
                                     required
                                 />
@@ -410,36 +392,18 @@ const Goals = () => {
                         </div>
 
                         <div className="form-group">
-                            <label>Select Profitable Trade *</label>
-                            <select
-                                value={contribution.tradeId}
-                                onChange={(e) => {
-                                    const tradeId = parseInt((e.target as HTMLSelectElement).value);
-                                    const trade = trades.find(t => t.id === tradeId);
-                                    setContribution({
-                                        tradeId,
-                                        amount: trade?.profit_loss || 0
-                                    });
-                                }}
-                            >
-                                <option value={0}>Select a trade...</option>
-                                {trades.map(trade => (
-                                    <option key={trade.id} value={trade.id}>
-                                        {trade.symbol} - {new Date(trade.date).toLocaleDateString()} - ₹{trade.profit_loss?.toFixed(2)}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-
-                        <div className="form-group">
                             <label>Contribution Amount (₹) *</label>
                             <input
                                 type="number"
                                 value={contribution.amount || ''}
-                                onChange={(e) => setContribution(prev => ({ ...prev, amount: parseFloat((e.target as HTMLInputElement).value) || 0 }))}
+                                onChange={(e) => setContribution({ amount: parseFloat((e.target as HTMLInputElement).value) || 0 })}
                                 min="0.01"
                                 step="0.01"
+                                placeholder="Enter amount to contribute"
                             />
+                            <small style={{ color: '#666', marginTop: '5px', display: 'block' }}>
+                                Enter any amount you want to contribute towards this goal
+                            </small>
                         </div>
 
                         <div className="modal-actions">

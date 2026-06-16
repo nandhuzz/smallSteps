@@ -390,8 +390,8 @@ func (a *App) DeleteGoal(goalID int) error {
 	return a.db.DeleteGoal(goalID)
 }
 
-func (a *App) ContributeToGoal(goalID, tradeID int, amount float64) error {
-	return a.db.ContributeToGoal(goalID, tradeID, amount)
+func (a *App) ContributeToGoal(goalID int, amount float64) error {
+	return a.db.ContributeToGoal(goalID, amount)
 }
 
 // Statistics Methods
