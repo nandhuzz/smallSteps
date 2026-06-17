@@ -78,6 +78,8 @@ export function GetOAuthCode():Promise<string>;
 
 export function GetPerTradePLData(arg1:number):Promise<Array<Record<string, any>>>;
 
+export function GetPaperTradingMode():Promise<boolean>;
+
 export function GetPortfolioWithAnalyticsToken():Promise<Array<broker.Position>>;
 
 export function GetProfitFactorTrend(arg1:number):Promise<Array<Record<string, any>>>;
@@ -119,6 +121,8 @@ export function GetUserProfileWithAnalyticsToken():Promise<broker.UserProfile>;
 export function GetWeeklyPLData(arg1:number):Promise<Array<Record<string, any>>>;
 
 export function SaveBrokerConfig(arg1:string,arg2:string,arg3:string,arg4:boolean,arg5:boolean,arg6:number):Promise<void>;
+
+export function SetPaperTradingMode(arg1:boolean):Promise<void>;
 
 export function SyncUpstoxTrades(arg1:number):Promise<Record<string, any>>;
 

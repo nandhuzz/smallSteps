@@ -15,7 +15,7 @@ import Settings from './components/Settings/Settings';
 import Logs from './components/Logs/Logs';
 import Capital from './components/Capital/Capital';
 import Sidebar from './components/Sidebar/Sidebar';
-import { CheckOvertrading } from '../wailsjs/go/main/App';
+import { CheckOvertrading, GetPaperTradingMode } from '../wailsjs/go/main/App';
 
 // Define route props interface
 interface RouteProps {
@@ -59,10 +59,11 @@ export function App() {
     });
     const [killSwitchChecked, setKillSwitchChecked] = useState(false);
     const [killSwitchEnabled, setKillSwitchEnabled] = useState(false);
+    const [paperTradingMode, setPaperTradingMode] = useState(false);
 
     // Helper function to check if kill switch is enabled for today
 
-    // Load dark mode preference and kill switch state on app start
+    // Load dark mode preference, kill switch state, and paper trading mode on app start
     useEffect(() => {
         const savedDarkMode = localStorage.getItem('darkMode') === 'true';
         if (savedDarkMode) {
@@ -73,7 +74,24 @@ export function App() {
         if (IsKillSwitchEnabledToday()) {
             setKillSwitchEnabled(true);
         }
+
+        // Load paper trading mode
+        loadPaperTradingMode();
     }, []);
+
+    const loadPaperTradingMode = async () => {
+        try {
+            const isPaperMode = await GetPaperTradingMode();
+            setPaperTradingMode(isPaperMode);
+            // Apply paper trading theme if enabled
+            if (isPaperMode) {
+                document.documentElement.classList.add('paper-trading-mode');
+                document.documentElement.classList.remove('dark-mode');
+            }
+        } catch (error) {
+            console.error('Error loading paper trading mode:', error);
+        }
+    };
 
     useEffect(() => {
         // Check for overtrading every 5 minutes
@@ -149,8 +167,30 @@ export function App() {
                     <span>🛑 Kill Switch Enabled - Trading stopped for today</span>
                 </div>
             )}
+
+            {paperTradingMode && (
+                <div style={{
+                    position: 'fixed',
+                    top: killSwitchEnabled ? '44px' : '0',
+                    left: '0',
+                    right: '0',
+                    background: 'linear-gradient(135deg, #1a1a1a 0%, #333333 100%)',
+                    color: 'white',
+                    padding: '12px',
+                    textAlign: 'center',
+                    fontWeight: 'bold',
+                    fontSize: '16px',
+                    zIndex: 9998,
+                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
+                    borderBottom: '3px solid #666666'
+                }}>
+                    📊 PAPER TRADING MODE - Practice Environment (No Real Money)
+                </div>
+            )}
             
-            <div className="app-container">
+            <div className="app-container" style={{
+                marginTop: paperTradingMode ? (killSwitchEnabled ? '88px' : '44px') : (killSwitchEnabled ? '44px' : '0')
+            }}>
                 <Sidebar />
                 <div className="main-content">
                     <Router>
