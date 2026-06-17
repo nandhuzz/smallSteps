@@ -12,7 +12,11 @@ import (
 )
 
 type Database struct {
-	DB *sql.DB
+	DB             *sql.DB
+	IsPaperTrading bool
+	LiveDBPath     string
+	PaperDBPath    string
+	AppDir         string
 }
 
 func NewDatabase() (*Database, error) {
@@ -28,28 +32,108 @@ func NewDatabase() (*Database, error) {
 		return nil, err
 	}
 
-	dbPath := filepath.Join(appDir, "trading.db")
-	db, err := sql.Open("sqlite3", dbPath)
+	liveDBPath := filepath.Join(appDir, "trading-test.db")
+	paperDBPath := filepath.Join(appDir, "paper-trading.db")
+
+	// Start with live trading database by default
+	db, err := sql.Open("sqlite3", liveDBPath)
 	if err != nil {
 		return nil, err
 	}
 
-	database := &Database{DB: db}
+	database := &Database{
+		DB:             db,
+		IsPaperTrading: false,
+		LiveDBPath:     liveDBPath,
+		PaperDBPath:    paperDBPath,
+		AppDir:         appDir,
+	}
 
-	// Run migrations
+	// Run migrations on live database
 	if err := database.RunMigrations(); err != nil {
 		return nil, fmt.Errorf("migration failed: %w", err)
 	}
 
 	// Reopen database connection after migrations
-	// (migrations close the connection)
-	db, err = sql.Open("sqlite3", dbPath)
+	db, err = sql.Open("sqlite3", liveDBPath)
 	if err != nil {
 		return nil, err
 	}
 	database.DB = db
 
+	// Initialize paper trading database if it doesn't exist
+	if err := database.InitializePaperTradingDB(); err != nil {
+		log.Printf("Warning: Failed to initialize paper trading database: %v", err)
+	}
+
 	return database, nil
+}
+
+// SwitchDatabase switches between live and paper trading databases
+func (d *Database) SwitchDatabase(isPaperMode bool) error {
+	// Close current connection
+	if d.DB != nil {
+		d.DB.Close()
+	}
+
+	var dbPath string
+	if isPaperMode {
+		dbPath = d.PaperDBPath
+	} else {
+		dbPath = d.LiveDBPath
+	}
+
+	// Open new connection
+	db, err := sql.Open("sqlite3", dbPath)
+	if err != nil {
+		return fmt.Errorf("failed to open database: %w", err)
+	}
+
+	d.DB = db
+	d.IsPaperTrading = isPaperMode
+
+	log.Printf("Switched to %s database", map[bool]string{true: "paper trading", false: "live trading"}[isPaperMode])
+	return nil
+}
+
+// InitializePaperTradingDB creates and initializes the paper trading database
+func (d *Database) InitializePaperTradingDB() error {
+	// Check if paper trading database already exists
+	if _, err := os.Stat(d.PaperDBPath); err == nil {
+		// Database exists, just verify it's accessible
+		db, err := sql.Open("sqlite3", d.PaperDBPath)
+		if err != nil {
+			return fmt.Errorf("failed to open paper trading database: %w", err)
+		}
+		db.Close()
+		return nil
+	}
+
+	// Create new paper trading database
+	db, err := sql.Open("sqlite3", d.PaperDBPath)
+	if err != nil {
+		return fmt.Errorf("failed to create paper trading database: %w", err)
+	}
+
+	// Temporarily switch to paper database for migrations
+	originalDB := d.DB
+	originalMode := d.IsPaperTrading
+	d.DB = db
+	d.IsPaperTrading = true
+
+	// Run migrations on paper trading database
+	if err := d.RunMigrations(); err != nil {
+		d.DB = originalDB
+		d.IsPaperTrading = originalMode
+		return fmt.Errorf("failed to run migrations on paper trading database: %w", err)
+	}
+
+	// Restore original database connection
+	d.DB = originalDB
+	d.IsPaperTrading = originalMode
+
+	log.Println("Paper trading database initialized successfully")
+	return nil
 }
 
 // Trade represents a trading transaction

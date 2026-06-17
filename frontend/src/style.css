@@ -38,6 +38,26 @@
   --info: #58a6ff;
 }
 
+/* Paper Trading Mode Theme - Black, White, Gray */
+.paper-trading-mode {
+  --bg-primary: #1a1a1a;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #f5f5f5;
+  --text-primary: #000000;
+  --text-secondary: #666666;
+  --text-tertiary: #999999;
+  --border-color: #cccccc;
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.15);
+  --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.2);
+  --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.25);
+  --accent-primary: #333333;
+  --accent-secondary: #555555;
+  --success: #28a745;
+  --danger: #dc3545;
+  --warning: #ffc107;
+  --info: #17a2b8;
+}
+
 html {
     background-color: rgba(27, 38, 54, 1);
     color: white;

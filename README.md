@@ -17,6 +17,7 @@ A comprehensive Windows desktop application built with Wails and React TypeScrip
 - **🎯 Goal Tracker** - Set financial goals and track progress
 - **📰 Market News** - Latest Indian market news integration
 - **🔗 Broker Integration** - Upstox Analytics Token support for portfolio sync
+- **📊 Paper Trading Mode** - Practice trading with separate database and distinct theme
 - **⚙️ Settings** - Configure trading limits and preferences
 - **📋 System Logs** - Comprehensive activity logging
 
@@ -357,6 +358,50 @@ The app uses CSS custom properties for theming:
 - Dark mode: Activated via `.dark-mode` class on `<html>` element
 
 See `frontend/src/style.css` for all theme variables.
+
+## 📊 Paper Trading Mode
+
+Practice trading without risking real money! Paper trading mode provides a completely separate environment for learning and testing strategies.
+
+### Features
+
+- **Separate Database**: Uses `paper-trading.db` - completely isolated from live trading data
+- **Distinct Theme**: Black, white, and gray color scheme for clear visual distinction
+- **Visual Banner**: Persistent banner showing "PAPER TRADING MODE" across all pages
+- **Instant Switching**: Toggle between live and paper trading without restarting the app
+- **Complete Feature Parity**: All trading features work identically in paper mode
+
+### How to Use
+
+1. **Enable Paper Trading**
+   - Go to Settings page
+   - Find "📊 Paper Trading Mode" section
+   - Toggle the switch to enable
+   - Confirm the mode switch dialog
+
+2. **Visual Indicators**
+   - Black/white/gray theme automatically applied
+   - Banner at top: "📊 PAPER TRADING MODE - Practice Environment"
+   - Settings page shows current mode status
+
+3. **Switch Back to Live Trading**
+   - Return to Settings
+   - Toggle the switch off
+   - Confirm to return to live trading
+   - Original theme restored
+
+### Database Locations
+
+- **Live Trading**: `~/.smallsteps-master/trading-master.db`
+- **Paper Trading**: `~/.smallsteps-master/paper-trading.db`
+
+### Important Notes
+
+- ⚠️ Data is completely isolated between modes
+- ✅ Both databases have identical schema
+- ✅ No data synchronization between modes
+- ✅ Safe to experiment without affecting live data
+- ✅ Perfect for testing new strategies
 
 ## 🔮 Future Enhancements
 

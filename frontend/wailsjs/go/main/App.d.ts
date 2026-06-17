@@ -60,6 +60,8 @@ export function GetMonthlyStats():Promise<Record<string, any>>;
 
 export function GetOAuthCode():Promise<string>;
 
+export function GetPaperTradingMode():Promise<boolean>;
+
 export function GetPortfolioWithAnalyticsToken():Promise<Array<broker.Position>>;
 
 export function GetRecentLogs(arg1:number):Promise<Array<Record<string, any>>>;
@@ -95,6 +97,8 @@ export function GetUpstoxPositions(arg1:number):Promise<Array<broker.Position>>;
 export function GetUserProfileWithAnalyticsToken():Promise<broker.UserProfile>;
 
 export function SaveBrokerConfig(arg1:string,arg2:string,arg3:string,arg4:boolean,arg5:boolean,arg6:number):Promise<void>;
+
+export function SetPaperTradingMode(arg1:boolean):Promise<void>;
 
 export function SyncUpstoxTrades(arg1:number):Promise<Record<string, any>>;
 

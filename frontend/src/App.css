@@ -80,6 +80,22 @@ body {
     }
 }
 
+.paper-trading-banner {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(135deg, #1a1a1a 0%, #333333 100%);
+    color: white;
+    padding: 12px;
+    text-align: center;
+    font-weight: bold;
+    font-size: 16px;
+    z-index: 9998;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    border-bottom: 3px solid #666666;
+}
+
 #App {
     height: 100vh;
     overflow: hidden;

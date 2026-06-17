@@ -114,6 +114,10 @@ export function GetOAuthCode() {
   return window['go']['main']['App']['GetOAuthCode']();
 }
 
+export function GetPaperTradingMode() {
+  return window['go']['main']['App']['GetPaperTradingMode']();
+}
+
 export function GetPortfolioWithAnalyticsToken() {
   return window['go']['main']['App']['GetPortfolioWithAnalyticsToken']();
 }
@@ -184,6 +188,10 @@ export function GetUserProfileWithAnalyticsToken() {
 
 export function SaveBrokerConfig(arg1, arg2, arg3, arg4, arg5, arg6) {
   return window['go']['main']['App']['SaveBrokerConfig'](arg1, arg2, arg3, arg4, arg5, arg6);
+}
+
+export function SetPaperTradingMode(arg1) {
+  return window['go']['main']['App']['SetPaperTradingMode'](arg1);
 }
 
 export function SyncUpstoxTrades(arg1) {

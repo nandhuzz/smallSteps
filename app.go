@@ -935,4 +935,32 @@ func (a *App) UpdateTradingSettingsWithProtection(maxTradesPerDay int, maxLossPe
 	return a.db.UpdateTradingSettings(settings)
 }
 
+// Paper Trading Mode Methods
+func (a *App) GetPaperTradingMode() bool {
+	if a.db == nil {
+		return false
+	}
+	return a.db.IsPaperTrading
+}
+
+func (a *App) SetPaperTradingMode(enabled bool) error {
+	if a.db == nil {
+		return fmt.Errorf("database not initialized")
+	}
+
+	// Switch database
+	if err := a.db.SwitchDatabase(enabled); err != nil {
+		a.db.LogMessage("ERROR", "Failed to switch database mode", err.Error())
+		return fmt.Errorf("failed to switch database: %w", err)
+	}
+
+	mode := "live trading"
+	if enabled {
+		mode = "paper trading"
+	}
+	a.db.LogMessage("INFO", fmt.Sprintf("Switched to %s mode", mode), "")
+
+	return nil
+}
+
 // Made with Bob

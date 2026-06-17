@@ -1,6 +1,6 @@
 import { h, Fragment } from 'preact';
 import { useState, useEffect } from 'preact/hooks';
-import { GetTradingSettings, UpdateTradingSettingsWithProtection, GetChecklistItems, CreateChecklistItem, UpdateChecklistItem, DeleteChecklistItem } from '../../../wailsjs/go/main/App';
+import { GetTradingSettings, UpdateTradingSettingsWithProtection, GetChecklistItems, CreateChecklistItem, UpdateChecklistItem, DeleteChecklistItem, GetPaperTradingMode, SetPaperTradingMode } from '../../../wailsjs/go/main/App';
 import './Settings.css';
 
 interface TradingSettings {
@@ -32,6 +32,8 @@ const Settings = () => {
     const [successMessage, setSuccessMessage] = useState('');
     const [errorMessage, setErrorMessage] = useState('');
     const [darkMode, setDarkMode] = useState(false);
+    const [paperTradingMode, setPaperTradingMode] = useState(false);
+    const [switchingMode, setSwitchingMode] = useState(false);
     
     // Accordion state
     const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
@@ -48,6 +50,7 @@ const Settings = () => {
     useEffect(() => {
         loadSettings();
         loadChecklistItems();
+        loadPaperTradingMode();
         // Load dark mode preference
         const savedDarkMode = localStorage.getItem('darkMode') === 'true';
         setDarkMode(savedDarkMode);
@@ -76,6 +79,59 @@ const Settings = () => {
             setErrorMessage('Error loading settings');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const loadPaperTradingMode = async () => {
+        try {
+            const isPaperMode = await GetPaperTradingMode();
+            setPaperTradingMode(isPaperMode);
+            // Apply paper trading theme if enabled
+            if (isPaperMode) {
+                document.documentElement.classList.add('paper-trading-mode');
+            }
+        } catch (error) {
+            console.error('Error loading paper trading mode:', error);
+        }
+    };
+
+    const handlePaperTradingToggle = async (enabled: boolean) => {
+        if (!confirm(enabled
+            ? 'Switch to Paper Trading Mode? You will be using a separate practice database with no real money at risk.'
+            : 'Switch to Live Trading Mode? You will be using your real trading database.')) {
+            return;
+        }
+
+        setSwitchingMode(true);
+        setErrorMessage('');
+        setSuccessMessage('');
+
+        try {
+            await SetPaperTradingMode(enabled);
+            setPaperTradingMode(enabled);
+            
+            // Apply or remove paper trading theme
+            if (enabled) {
+                document.documentElement.classList.add('paper-trading-mode');
+                document.documentElement.classList.remove('dark-mode');
+            } else {
+                document.documentElement.classList.remove('paper-trading-mode');
+                // Restore dark mode if it was enabled
+                if (darkMode) {
+                    document.documentElement.classList.add('dark-mode');
+                }
+            }
+
+            const mode = enabled ? 'Paper Trading' : 'Live Trading';
+            setSuccessMessage(`Successfully switched to ${mode} mode!`);
+            setTimeout(() => setSuccessMessage(''), 3000);
+            
+            // Reload settings from new database
+            await loadSettings();
+        } catch (error) {
+            setErrorMessage('Error switching mode: ' + error);
+        } finally {
+            setSwitchingMode(false);
         }
     };
 
@@ -453,6 +509,61 @@ const Settings = () => {
                                     Switch between light and dark themes
                                 </div>
                             </div>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="settings-section">
+                        <div
+                            className="accordion-header"
+                            onClick={() => toggleSection('paper-trading')}
+                        >
+                            <h2>📊 Paper Trading Mode</h2>
+                            <span className={`accordion-icon ${isSectionExpanded('paper-trading') ? 'expanded' : ''}`}>
+                                ▼
+                            </span>
+                        </div>
+                        {isSectionExpanded('paper-trading') && (
+                            <div className="accordion-content">
+                                <p className="section-description">
+                                    Practice trading with a separate database - no real money at risk
+                                </p>
+
+                        <div className="form-group">
+                            <label className="checkbox-label">
+                                <input
+                                    type="checkbox"
+                                    checked={paperTradingMode}
+                                    onChange={(e) => handlePaperTradingToggle((e.target as HTMLInputElement).checked)}
+                                    disabled={switchingMode}
+                                />
+                                <span>Enable Paper Trading Mode</span>
+                            </label>
+                            <div className="input-hint">
+                                    {paperTradingMode
+                                        ? '🟢 Paper Trading Active - Using practice database with black/white/gray theme'
+                                        : '🔴 Live Trading Active - Using real trading database'}
+                                </div>
+                            </div>
+
+                            {paperTradingMode && (
+                                <div style={{
+                                    background: '#f5f5f5',
+                                    border: '2px solid #333',
+                                    borderRadius: '8px',
+                                    padding: '15px',
+                                    marginTop: '15px',
+                                    color: '#333'
+                                }}>
+                                    <strong>⚠️ Paper Trading Mode Active</strong>
+                                    <ul style={{ marginTop: '10px', paddingLeft: '20px' }}>
+                                        <li>All trades are simulated - no real money involved</li>
+                                        <li>Data is stored in a separate database (paper-trading.db)</li>
+                                        <li>Theme changed to black/white/gray for clear distinction</li>
+                                        <li>Toggle off to return to live trading</li>
+                                    </ul>
+                                </div>
+                            )}
                             </div>
                         )}
                     </div>
