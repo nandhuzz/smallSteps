@@ -40,6 +40,30 @@ func (d *Database) UpdateTrade(trade *Trade) error {
 	return nil
 }
 
+func (d *Database) UpdateClosedTrade(tradeID int, symbol, tradeType string, instrumentType, optionType *string, strikePrice *float64, expiryDate *string, quantity int, entryPrice, exitPrice, brokerage, otherCharges float64, notes, emotionBefore, emotionAfter string) error {
+	// Calculate P&L
+	var profitLoss float64
+	if tradeType == "BUY" {
+		profitLoss = (exitPrice - entryPrice) * float64(quantity)
+	} else {
+		profitLoss = (entryPrice - exitPrice) * float64(quantity)
+	}
+	profitLoss -= (brokerage + otherCharges)
+
+	query := `UPDATE trades SET symbol = ?, trade_type = ?, instrument_type = ?, option_type = ?,
+			  strike_price = ?, expiry_date = ?, quantity = ?, entry_price = ?, exit_price = ?,
+			  profit_loss = ?, brokerage = ?, other_charges = ?, notes = ?, emotion_before = ?,
+			  emotion_after = ? WHERE id = ?`
+	_, err := d.DB.Exec(query, symbol, tradeType, instrumentType, optionType, strikePrice, expiryDate,
+		quantity, entryPrice, exitPrice, profitLoss, brokerage, otherCharges, notes, emotionBefore,
+		emotionAfter, tradeID)
+	if err != nil {
+		return err
+	}
+	d.LogMessage("TRADE", fmt.Sprintf("Closed trade updated: ID %d, %s %s, P&L: %.2f", tradeID, tradeType, symbol, profitLoss), "")
+	return nil
+}
+
 func (d *Database) DeleteTrade(tradeID int) error {
 	// Delete trade directly (no need to delete from goal_contributions since trade_id is removed)
 	_, err := d.DB.Exec(`DELETE FROM trades WHERE id = ?`, tradeID)

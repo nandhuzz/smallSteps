@@ -198,6 +198,10 @@ export function UpdateChecklistItem(arg1, arg2, arg3, arg4) {
   return window['go']['main']['App']['UpdateChecklistItem'](arg1, arg2, arg3, arg4);
 }
 
+export function UpdateClosedTrade(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12, arg13, arg14, arg15) {
+  return window['go']['main']['App']['UpdateClosedTrade'](arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12, arg13, arg14, arg15);
+}
+
 export function UpdateDailyChecklist(arg1, arg2, arg3, arg4, arg5, arg6, arg7) {
   return window['go']['main']['App']['UpdateDailyChecklist'](arg1, arg2, arg3, arg4, arg5, arg6, arg7);
 }
