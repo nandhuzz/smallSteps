@@ -2,7 +2,7 @@ import { h } from 'preact';
 import { useState, useEffect } from 'preact/hooks';
 // @ts-ignore - Recharts is designed for React but works with Preact
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { GetTodayTrades, GetMonthlyStats, GetDailyPLData } from '../../../wailsjs/go/main/App';
+import { GetTodayTrades, GetMonthlyStats, GetDailyPLData, GetWeeklyPLData, GetMonthlyPLData, GetPerTradePLData } from '../../../wailsjs/go/main/App';
 import { database } from '../../../wailsjs/go/models';
 import './Dashboard.css';
 
@@ -23,27 +23,44 @@ interface DailyData {
     loss: number;
     net_pl: number;
     total_charges: number;
+    trade_id?: number;
+    symbol?: string;
+    trade_type?: string;
 }
+
+type TimePeriod = 'daily' | 'weekly' | 'monthly' | 'per_trade';
 
 const Dashboard = () => {
     const [todayTrades, setTodayTrades] = useState<Trade[]>([]);
     const [stats, setStats] = useState<Stats | null>(null);
     const [dailyData, setDailyData] = useState<DailyData[]>([]);
     const [loading, setLoading] = useState(true);
+    const [timePeriod, setTimePeriod] = useState<TimePeriod>('daily');
 
     useEffect(() => {
         loadData();
         const interval = setInterval(loadData, 30000); // Refresh every 30 seconds
         return () => clearInterval(interval);
-    }, []);
+    }, [timePeriod]);
 
     const loadData = async () => {
         try {
-            const [trades, monthStats, plData] = await Promise.all([
+            let plData;
+            if (timePeriod === 'daily') {
+                plData = await GetDailyPLData(30); // Last 30 days
+            } else if (timePeriod === 'weekly') {
+                plData = await GetWeeklyPLData(12); // Last 12 weeks
+            } else if (timePeriod === 'monthly') {
+                plData = await GetMonthlyPLData(12); // Last 12 months
+            } else {
+                plData = await GetPerTradePLData(0); // Per trade for last day
+            }
+
+            const [trades, monthStats] = await Promise.all([
                 GetTodayTrades(),
-                GetMonthlyStats(),
-                GetDailyPLData(30) // Last 30 days
+                GetMonthlyStats()
             ]);
+            
             setTodayTrades((trades || []) as Trade[]);
             setStats(monthStats as Stats);
             setDailyData((plData || []) as DailyData[]);
@@ -52,6 +69,11 @@ const Dashboard = () => {
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleTimePeriodChange = (e: Event) => {
+        const target = e.target as HTMLSelectElement;
+        setTimePeriod(target.value as TimePeriod);
     };
 
     if (loading) {
@@ -137,7 +159,19 @@ const Dashboard = () => {
 
             <div className="charts-grid">
                 <div className="chart-card" style={{ gridColumn: '1 / -1' }}>
-                    <h3>📈 Profit & Loss Trend (Last 30 Days)</h3>
+                    <div className="chart-header">
+                        <h3>📈 Profit & Loss Trend</h3>
+                        <select
+                            className="time-period-selector"
+                            value={timePeriod}
+                            onChange={handleTimePeriodChange}
+                        >
+                            <option value="daily">Daily (Last 30 Days)</option>
+                            <option value="weekly">Weekly (Last 12 Weeks)</option>
+                            <option value="monthly">Monthly (Last 12 Months)</option>
+                            <option value="per_trade">Per Trade (1 Day)</option>
+                        </select>
+                    </div>
                     {dailyData.length > 0 ? (
                         <ResponsiveContainer width="100%" height={300}>
                             {/* @ts-ignore - Recharts compatibility with Preact */}

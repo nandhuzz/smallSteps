@@ -56,9 +56,13 @@ export function GetIndianMarketNews():Promise<Array<main.NewsArticle>>;
 
 export function GetMarketQuoteWithAnalyticsToken(arg1:string,arg2:string):Promise<broker.MarketQuote>;
 
+export function GetMonthlyPLData(arg1:number):Promise<Array<Record<string, any>>>;
+
 export function GetMonthlyStats():Promise<Record<string, any>>;
 
 export function GetOAuthCode():Promise<string>;
+
+export function GetPerTradePLData(arg1:number):Promise<Array<Record<string, any>>>;
 
 export function GetPortfolioWithAnalyticsToken():Promise<Array<broker.Position>>;
 
@@ -93,6 +97,8 @@ export function GetUpstoxMarketQuote(arg1:string,arg2:string):Promise<broker.Mar
 export function GetUpstoxPositions(arg1:number):Promise<Array<broker.Position>>;
 
 export function GetUserProfileWithAnalyticsToken():Promise<broker.UserProfile>;
+
+export function GetWeeklyPLData(arg1:number):Promise<Array<Record<string, any>>>;
 
 export function SaveBrokerConfig(arg1:string,arg2:string,arg3:string,arg4:boolean,arg5:boolean,arg6:number):Promise<void>;
 

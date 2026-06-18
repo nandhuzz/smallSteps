@@ -106,12 +106,20 @@ export function GetMarketQuoteWithAnalyticsToken(arg1, arg2) {
   return window['go']['main']['App']['GetMarketQuoteWithAnalyticsToken'](arg1, arg2);
 }
 
+export function GetMonthlyPLData(arg1) {
+  return window['go']['main']['App']['GetMonthlyPLData'](arg1);
+}
+
 export function GetMonthlyStats() {
   return window['go']['main']['App']['GetMonthlyStats']();
 }
 
 export function GetOAuthCode() {
   return window['go']['main']['App']['GetOAuthCode']();
+}
+
+export function GetPerTradePLData(arg1) {
+  return window['go']['main']['App']['GetPerTradePLData'](arg1);
 }
 
 export function GetPortfolioWithAnalyticsToken() {
@@ -180,6 +188,10 @@ export function GetUpstoxPositions(arg1) {
 
 export function GetUserProfileWithAnalyticsToken() {
   return window['go']['main']['App']['GetUserProfileWithAnalyticsToken']();
+}
+
+export function GetWeeklyPLData(arg1) {
+  return window['go']['main']['App']['GetWeeklyPLData'](arg1);
 }
 
 export function SaveBrokerConfig(arg1, arg2, arg3, arg4, arg5, arg6) {

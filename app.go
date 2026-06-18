@@ -439,6 +439,18 @@ func (a *App) GetDailyPLData(days int) ([]map[string]interface{}, error) {
 	return a.db.GetDailyPLData(days)
 }
 
+func (a *App) GetWeeklyPLData(weeks int) ([]map[string]interface{}, error) {
+	return a.db.GetWeeklyPLData(weeks)
+}
+
+func (a *App) GetMonthlyPLData(months int) ([]map[string]interface{}, error) {
+	return a.db.GetMonthlyPLData(months)
+}
+
+func (a *App) GetPerTradePLData(days int) ([]map[string]interface{}, error) {
+	return a.db.GetPerTradePLData(days)
+}
+
 // Overtrading Check
 func (a *App) CheckOvertrading() (map[string]interface{}, error) {
 	isOvertrading, message, err := a.db.CheckOvertrading()
