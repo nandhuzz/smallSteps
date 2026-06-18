@@ -253,14 +253,6 @@ func (a *App) UpdateTrade(tradeID int, symbol, tradeType string, quantity int, e
 		EmotionBefore: emotionBefore,
 	}
 
-	// 	var profitLoss float64
-	// if trade.TradeType == "BUY" {
-	// 	profitLoss = (exitPrice - trade.EntryPrice) * float64(trade.Quantity)
-	// } else {
-	// 	profitLoss = (trade.EntryPrice - exitPrice) * float64(trade.Quantity)
-	// }
-	// profitLoss -= (trade.Brokerage + trade.OtherCharges)
-
 	// Set optional fields for options trading
 	if instrumentType != "" {
 		instType := instrumentType
