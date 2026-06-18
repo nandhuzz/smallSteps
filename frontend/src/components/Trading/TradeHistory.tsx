@@ -1,6 +1,6 @@
-import { h } from 'preact';
+import { h, Fragment } from 'preact';
 import { useState, useEffect } from 'preact/hooks';
-import { GetTrades, CloseTrade, UpdateTrade, DeleteTrade } from '../../../wailsjs/go/main/App';
+import { GetTrades, CloseTrade, UpdateTrade, UpdateClosedTrade, DeleteTrade } from '../../../wailsjs/go/main/App';
 import './Trading.css';
 
 interface Trade {
@@ -52,10 +52,13 @@ const TradeHistory = () => {
         expiryDate: '',
         quantity: 0,
         entryPrice: 0,
+        exitPrice: 0,
         brokerage: 0,
         otherCharges: 0,
         notes: '',
-        emotionBefore: 'Calm'
+        emotionBefore: 'Calm',
+        emotionAfter: 'Calm',
+        status: 'OPEN'
     });
 
     useEffect(() => {
@@ -145,10 +148,13 @@ const TradeHistory = () => {
             expiryDate: trade.expiry_date || '',
             quantity: trade.quantity,
             entryPrice: trade.entry_price,
+            exitPrice: trade.exit_price || 0,
             brokerage: trade.brokerage,
             otherCharges: trade.other_charges,
             notes: trade.notes,
-            emotionBefore: trade.emotion_before
+            emotionBefore: trade.emotion_before,
+            emotionAfter: trade.emotion_after || 'Calm',
+            status: trade.status
         });
         setShowEditModal(true);
     };
@@ -159,22 +165,62 @@ const TradeHistory = () => {
             return;
         }
 
+        // Validate options-specific fields
+        if (editData.instrumentType === 'OPTIONS') {
+            if (editData.strikePrice <= 0) {
+                alert('Please provide a valid strike price for options');
+                return;
+            }
+            if (!editData.expiryDate) {
+                alert('Please provide an expiry date for options');
+                return;
+            }
+        }
+
+        // Validate closed trade fields
+        if (editData.status === 'CLOSED' && editData.exitPrice <= 0) {
+            alert('Please provide a valid exit price for closed trades');
+            return;
+        }
+
         try {
-            await UpdateTrade(
-                editData.id,
-                editData.symbol,
-                editData.tradeType,
-                editData.quantity,
-                editData.entryPrice,
-                editData.brokerage,
-                editData.otherCharges,
-                editData.notes,
-                editData.emotionBefore,
-                editData.instrumentType,
-                editData.optionType,
-                editData.strikePrice,
-                editData.expiryDate
-            );
+            if (editData.status === 'CLOSED') {
+                // Use UpdateClosedTrade for closed trades (includes exit price and recalculates P&L)
+                await UpdateClosedTrade(
+                    editData.id,
+                    editData.symbol.toUpperCase(),
+                    editData.tradeType,
+                    editData.quantity,
+                    editData.entryPrice,
+                    editData.exitPrice,
+                    editData.brokerage,
+                    editData.otherCharges,
+                    editData.notes,
+                    editData.emotionBefore,
+                    editData.emotionAfter,
+                    editData.instrumentType,
+                    editData.instrumentType === 'OPTIONS' ? editData.optionType : '',
+                    editData.instrumentType === 'OPTIONS' ? editData.strikePrice : 0,
+                    editData.instrumentType === 'OPTIONS' ? editData.expiryDate : ''
+                );
+            } else {
+                // Use UpdateTrade for open trades
+                await UpdateTrade(
+                    editData.id,
+                    editData.symbol.toUpperCase(),
+                    editData.tradeType,
+                    editData.quantity,
+                    editData.entryPrice,
+                    editData.brokerage,
+                    editData.otherCharges,
+                    editData.notes,
+                    editData.emotionBefore,
+                    editData.instrumentType,
+                    editData.instrumentType === 'OPTIONS' ? editData.optionType : '',
+                    editData.instrumentType === 'OPTIONS' ? editData.strikePrice : 0,
+                    editData.instrumentType === 'OPTIONS' ? editData.expiryDate : ''
+                );
+            }
             setShowEditModal(false);
             await loadTrades();
         } catch (error) {
@@ -421,15 +467,13 @@ const TradeHistory = () => {
                                         Close Trade
                                     </button>
                                 )}
-                                {trade.status === 'OPEN' && (
-                                    <button
-                                        className="action-button action-button-secondary"
-                                        onClick={() => handleEditTrade(trade)}
-                                        style={{ flex: 1 }}
-                                    >
-                                        ✏️ Edit
-                                    </button>
-                                )}
+                                <button
+                                    className="action-button action-button-secondary"
+                                    onClick={() => handleEditTrade(trade)}
+                                    style={{ flex: 1 }}
+                                >
+                                    ✏️ Edit
+                                </button>
                                 <button
                                     className="action-button"
                                     onClick={() => handleDeleteTrade(trade.id)}
@@ -497,9 +541,35 @@ const TradeHistory = () => {
 
             {showEditModal && (
                 <div className="modal-overlay" onClick={() => setShowEditModal(false)}>
-                    <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                    <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxHeight: '90vh', overflowY: 'auto' }}>
                         <div className="modal-header">
                             <h2>Edit Trade</h2>
+                        </div>
+
+                        <div className="form-group">
+                            <label>Instrument Type *</label>
+                            <div style={{ display: 'flex', gap: '15px', marginTop: '8px' }}>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                    <input
+                                        type="radio"
+                                        name="editInstrumentType"
+                                        value="EQUITY"
+                                        checked={editData.instrumentType === 'EQUITY'}
+                                        onChange={(e) => setEditData(prev => ({ ...prev, instrumentType: (e.target as HTMLInputElement).value }))}
+                                    />
+                                    Equity
+                                </label>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                    <input
+                                        type="radio"
+                                        name="editInstrumentType"
+                                        value="OPTIONS"
+                                        checked={editData.instrumentType === 'OPTIONS'}
+                                        onChange={(e) => setEditData(prev => ({ ...prev, instrumentType: (e.target as HTMLInputElement).value }))}
+                                    />
+                                    Options
+                                </label>
+                            </div>
                         </div>
 
                         <div className="form-group">
@@ -511,6 +581,58 @@ const TradeHistory = () => {
                                 required
                             />
                         </div>
+
+                        {editData.instrumentType === 'OPTIONS' && (
+                            <>
+                                <div className="form-group">
+                                    <label>Option Type *</label>
+                                    <div style={{ display: 'flex', gap: '15px', marginTop: '8px' }}>
+                                        <label style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                            <input
+                                                type="radio"
+                                                name="editOptionType"
+                                                value="CALL"
+                                                checked={editData.optionType === 'CALL'}
+                                                onChange={(e) => setEditData(prev => ({ ...prev, optionType: (e.target as HTMLInputElement).value }))}
+                                            />
+                                            CALL (CE)
+                                        </label>
+                                        <label style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                            <input
+                                                type="radio"
+                                                name="editOptionType"
+                                                value="PUT"
+                                                checked={editData.optionType === 'PUT'}
+                                                onChange={(e) => setEditData(prev => ({ ...prev, optionType: (e.target as HTMLInputElement).value }))}
+                                            />
+                                            PUT (PE)
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div className="form-group">
+                                    <label>Strike Price *</label>
+                                    <input
+                                        type="number"
+                                        value={editData.strikePrice || ''}
+                                        onChange={(e) => setEditData(prev => ({ ...prev, strikePrice: parseFloat((e.target as HTMLInputElement).value) || 0 }))}
+                                        min="0"
+                                        step="50"
+                                        required
+                                    />
+                                </div>
+
+                                <div className="form-group">
+                                    <label>Expiry Date *</label>
+                                    <input
+                                        type="date"
+                                        value={editData.expiryDate}
+                                        onChange={(e) => setEditData(prev => ({ ...prev, expiryDate: (e.target as HTMLInputElement).value }))}
+                                        required
+                                    />
+                                </div>
+                            </>
+                        )}
 
                         <div className="form-group">
                             <label>Trade Type *</label>
@@ -546,6 +668,23 @@ const TradeHistory = () => {
                             />
                         </div>
 
+                        {editData.status === 'CLOSED' && (
+                            <div className="form-group">
+                                <label>Exit Price (₹) *</label>
+                                <input
+                                    type="number"
+                                    step="0.01"
+                                    value={editData.exitPrice || ''}
+                                    onChange={(e) => setEditData(prev => ({ ...prev, exitPrice: parseFloat((e.target as HTMLInputElement).value) || 0 }))}
+                                    min="0.01"
+                                    required
+                                />
+                                <small style={{ color: '#666', fontSize: '12px', marginTop: '5px', display: 'block' }}>
+                                    💡 P&L will be automatically recalculated when you save
+                                </small>
+                            </div>
+                        )}
+
                         <div className="form-group">
                             <label>Brokerage (₹)</label>
                             <input
@@ -569,11 +708,45 @@ const TradeHistory = () => {
                         </div>
 
                         <div className="form-group">
+                            <label>Emotion Before Trade</label>
+                            <select
+                                value={editData.emotionBefore}
+                                onChange={(e) => setEditData(prev => ({ ...prev, emotionBefore: (e.target as HTMLSelectElement).value }))}
+                            >
+                                <option value="Calm">Calm</option>
+                                <option value="Anxious">Anxious</option>
+                                <option value="Confident">Confident</option>
+                                <option value="Fearful">Fearful</option>
+                                <option value="Greedy">Greedy</option>
+                            </select>
+                        </div>
+
+                        {editData.status === 'CLOSED' && (
+                            <div className="form-group">
+                                <label>Emotion After Trade</label>
+                                <select
+                                    value={editData.emotionAfter}
+                                    onChange={(e) => setEditData(prev => ({ ...prev, emotionAfter: (e.target as HTMLSelectElement).value }))}
+                                >
+                                    <option value="Calm">Calm</option>
+                                    <option value="Anxious">Anxious</option>
+                                    <option value="Confident">Confident</option>
+                                    <option value="Fearful">Fearful</option>
+                                    <option value="Greedy">Greedy</option>
+                                    <option value="Relieved">Relieved</option>
+                                    <option value="Disappointed">Disappointed</option>
+                                    <option value="Frustrated">Frustrated</option>
+                                </select>
+                            </div>
+                        )}
+
+                        <div className="form-group">
                             <label>Notes</label>
                             <textarea
                                 value={editData.notes}
                                 onChange={(e) => setEditData(prev => ({ ...prev, notes: (e.target as HTMLTextAreaElement).value }))}
                                 rows={3}
+                                placeholder="Trade rationale, setup details, etc."
                             />
                         </div>
 

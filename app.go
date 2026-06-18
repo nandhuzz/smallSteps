@@ -276,6 +276,27 @@ func (a *App) UpdateTrade(tradeID int, symbol, tradeType string, quantity int, e
 	return a.db.UpdateTrade(trade)
 }
 
+func (a *App) UpdateClosedTrade(tradeID int, symbol string, tradeType string, quantity int, entryPrice float64, exitPrice float64, brokerage float64, otherCharges float64, notes string, emotionBefore string, emotionAfter string, instrumentType string, optionType string, strikePrice float64, expiryDate string) error {
+	var instType, optType, expiry *string
+	var strike *float64
+
+	// Set optional fields for options trading
+	if instrumentType != "" {
+		instType = &instrumentType
+	}
+	if optionType != "" {
+		optType = &optionType
+	}
+	if strikePrice > 0 {
+		strike = &strikePrice
+	}
+	if expiryDate != "" {
+		expiry = &expiryDate
+	}
+
+	return a.db.UpdateClosedTrade(tradeID, symbol, tradeType, instType, optType, strike, expiry, quantity, entryPrice, exitPrice, brokerage, otherCharges, notes, emotionBefore, emotionAfter)
+}
+
 func (a *App) DeleteTrade(tradeID int) error {
 	return a.db.DeleteTrade(tradeID)
 }
@@ -410,6 +431,18 @@ func (a *App) GetMonthlyStats() (map[string]interface{}, error) {
 
 func (a *App) GetDailyPLData(days int) ([]map[string]interface{}, error) {
 	return a.db.GetDailyPLData(days)
+}
+
+func (a *App) GetWeeklyPLData(weeks int) ([]map[string]interface{}, error) {
+	return a.db.GetWeeklyPLData(weeks)
+}
+
+func (a *App) GetMonthlyPLData(months int) ([]map[string]interface{}, error) {
+	return a.db.GetMonthlyPLData(months)
+}
+
+func (a *App) GetPerTradePLData(days int) ([]map[string]interface{}, error) {
+	return a.db.GetPerTradePLData(days)
 }
 
 // Overtrading Check

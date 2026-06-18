@@ -109,6 +109,45 @@
     color: var(--text-primary);
 }
 
+.chart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.chart-header h3 {
+    margin: 0;
+}
+
+.time-period-selector {
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    outline: none;
+}
+
+.time-period-selector:hover {
+    border-color: #667eea;
+    background: var(--bg-tertiary);
+}
+
+.time-period-selector:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.time-period-selector option {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
 .no-data {
     display: flex;
     align-items: center;

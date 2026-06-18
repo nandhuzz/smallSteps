@@ -40,6 +40,30 @@ func (d *Database) UpdateTrade(trade *Trade) error {
 	return nil
 }
 
+func (d *Database) UpdateClosedTrade(tradeID int, symbol, tradeType string, instrumentType, optionType *string, strikePrice *float64, expiryDate *string, quantity int, entryPrice, exitPrice, brokerage, otherCharges float64, notes, emotionBefore, emotionAfter string) error {
+	// Calculate P&L
+	var profitLoss float64
+	if tradeType == "BUY" {
+		profitLoss = (exitPrice - entryPrice) * float64(quantity)
+	} else {
+		profitLoss = (entryPrice - exitPrice) * float64(quantity)
+	}
+	profitLoss -= (brokerage + otherCharges)
+
+	query := `UPDATE trades SET symbol = ?, trade_type = ?, instrument_type = ?, option_type = ?,
+			  strike_price = ?, expiry_date = ?, quantity = ?, entry_price = ?, exit_price = ?,
+			  profit_loss = ?, brokerage = ?, other_charges = ?, notes = ?, emotion_before = ?,
+			  emotion_after = ? WHERE id = ?`
+	_, err := d.DB.Exec(query, symbol, tradeType, instrumentType, optionType, strikePrice, expiryDate,
+		quantity, entryPrice, exitPrice, profitLoss, brokerage, otherCharges, notes, emotionBefore,
+		emotionAfter, tradeID)
+	if err != nil {
+		return err
+	}
+	d.LogMessage("TRADE", fmt.Sprintf("Closed trade updated: ID %d, %s %s, P&L: %.2f", tradeID, tradeType, symbol, profitLoss), "")
+	return nil
+}
+
 func (d *Database) DeleteTrade(tradeID int) error {
 	// Delete trade directly (no need to delete from goal_contributions since trade_id is removed)
 	_, err := d.DB.Exec(`DELETE FROM trades WHERE id = ?`, tradeID)
@@ -459,13 +483,13 @@ func (d *Database) ContributeToGoal(goalID int, amount float64) error {
 // Get Daily P&L Data for graphs
 func (d *Database) GetDailyPLData(days int) ([]map[string]interface{}, error) {
 	query := `
-		SELECT DATE(date) as trade_date, 
+		SELECT DATE(date) as trade_date,
 			   COUNT(*) as trade_count,
 			   SUM(CASE WHEN profit_loss > 0 THEN profit_loss ELSE 0 END) as profit,
 			   SUM(CASE WHEN profit_loss < 0 THEN profit_loss ELSE 0 END) as loss,
 			   SUM(COALESCE(profit_loss, 0)) as net_pl,
 			   SUM(brokerage + other_charges) as total_charges
-		FROM trades 
+		FROM trades
 		WHERE date >= DATE('now', '-' || ? || ' days')
 		AND status = 'CLOSED'
 		GROUP BY DATE(date)
@@ -500,6 +524,166 @@ func (d *Database) GetDailyPLData(days int) ([]map[string]interface{}, error) {
 	}
 
 	return data, nil
+}
+
+// Get Weekly P&L Data for graphs
+func (d *Database) GetWeeklyPLData(weeks int) ([]map[string]interface{}, error) {
+	query := `
+		SELECT strftime('%Y-W%W', date) as week_label,
+			   DATE(date, 'weekday 0', '-6 days') as week_start,
+			   COUNT(*) as trade_count,
+			   SUM(CASE WHEN profit_loss > 0 THEN profit_loss ELSE 0 END) as profit,
+			   SUM(CASE WHEN profit_loss < 0 THEN profit_loss ELSE 0 END) as loss,
+			   SUM(COALESCE(profit_loss, 0)) as net_pl,
+			   SUM(brokerage + other_charges) as total_charges
+		FROM trades
+		WHERE date >= DATE('now', '-' || ? || ' days')
+		AND status = 'CLOSED'
+		GROUP BY strftime('%Y-%W', date)
+		ORDER BY week_start ASC
+	`
+
+	rows, err := d.DB.Query(query, weeks*7)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var data []map[string]interface{}
+	for rows.Next() {
+		var weekLabel, weekStart string
+		var tradeCount int
+		var profit, loss, netPL, totalCharges float64
+
+		err := rows.Scan(&weekLabel, &weekStart, &tradeCount, &profit, &loss, &netPL, &totalCharges)
+		if err != nil {
+			return nil, err
+		}
+
+		data = append(data, map[string]interface{}{
+			"date":          weekLabel,
+			"trade_count":   tradeCount,
+			"profit":        round2(profit),
+			"loss":          round2(loss),
+			"net_pl":        round2(netPL),
+			"total_charges": totalCharges,
+		})
+	}
+
+	return data, nil
+}
+
+// Get Monthly P&L Data for graphs
+func (d *Database) GetMonthlyPLData(months int) ([]map[string]interface{}, error) {
+	query := `
+		SELECT strftime('%Y-%m', date) as month_label,
+			   COUNT(*) as trade_count,
+			   SUM(CASE WHEN profit_loss > 0 THEN profit_loss ELSE 0 END) as profit,
+			   SUM(CASE WHEN profit_loss < 0 THEN profit_loss ELSE 0 END) as loss,
+			   SUM(COALESCE(profit_loss, 0)) as net_pl,
+			   SUM(brokerage + other_charges) as total_charges
+		FROM trades
+		WHERE date >= DATE('now', '-' || ? || ' months')
+		AND status = 'CLOSED'
+		GROUP BY strftime('%Y-%m', date)
+		ORDER BY month_label ASC
+	`
+
+	rows, err := d.DB.Query(query, months)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var data []map[string]interface{}
+	for rows.Next() {
+		var monthLabel string
+		var tradeCount int
+		var profit, loss, netPL, totalCharges float64
+
+		err := rows.Scan(&monthLabel, &tradeCount, &profit, &loss, &netPL, &totalCharges)
+		if err != nil {
+			return nil, err
+		}
+
+		data = append(data, map[string]interface{}{
+			"date":          monthLabel,
+			"trade_count":   tradeCount,
+			"profit":        round2(profit),
+			"loss":          round2(loss),
+			"net_pl":        round2(netPL),
+			"total_charges": totalCharges,
+		})
+	}
+
+	return data, nil
+}
+
+// Get Per Trade P&L Data for graphs (individual trades)
+func (d *Database) GetPerTradePLData(days int) ([]map[string]interface{}, error) {
+	query := `
+		SELECT
+			id,
+			datetime(date) as trade_datetime,
+			symbol,
+			trade_type,
+			COALESCE(profit_loss, 0) as net_pl,
+			brokerage + other_charges as total_charges
+		FROM trades
+		WHERE date >= DATE('now', '-' || ? || ' days')
+		AND status = 'CLOSED'
+		ORDER BY date ASC, id ASC
+	`
+
+	rows, err := d.DB.Query(query, days)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var data []map[string]interface{}
+	for rows.Next() {
+		var id int
+		var tradeDateTime, symbol, tradeType string
+		var netPL, totalCharges float64
+
+		err := rows.Scan(&id, &tradeDateTime, &symbol, &tradeType, &netPL, &totalCharges)
+		if err != nil {
+			return nil, err
+		}
+
+		// Create a label combining date and symbol for better identification
+		label := fmt.Sprintf("%s-%s", tradeDateTime[:10], symbol)
+
+		data = append(data, map[string]interface{}{
+			"date":          label,
+			"trade_id":      id,
+			"symbol":        symbol,
+			"trade_type":    tradeType,
+			"trade_count":   1,
+			"profit":        round2(maxFloat(netPL, 0)),
+			"loss":          round2(minFloat(netPL, 0)),
+			"net_pl":        round2(netPL),
+			"total_charges": round2(totalCharges),
+		})
+	}
+
+	return data, nil
+}
+
+// Helper functions for per-trade data
+func maxFloat(a, b float64) float64 {
+	if a > b {
+		return a
+	}
+	return b
+}
+
+func minFloat(a, b float64) float64 {
+	if a < b {
+		return a
+	}
+	return b
 }
 
 // Trading Statistics
