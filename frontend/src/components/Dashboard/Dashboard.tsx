@@ -192,6 +192,8 @@ const Dashboard = () => {
                                 <Line type="monotone" dataKey="profit" stroke="#4CAF50" name="Profit" strokeWidth={2} />
                                 {/* @ts-ignore - Recharts compatibility with Preact */}
                                 <Line type="monotone" dataKey="loss" stroke="#f44336" name="Loss" strokeWidth={2} />
+                                {/* @ts-ignore - Recharts compatibility with Preact */}
+                                <Line type="monotone"  dataKey="total_charges" stroke="#ff8800" name="Charges" strokeWidth={1} />
                             </LineChart>
                         </ResponsiveContainer>
                     ) : (
