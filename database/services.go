@@ -1122,3 +1122,474 @@ func (d *Database) InitializeDefaultChecklistItems() error {
 }
 
 // Made with Bob
+
+// ============================================================================
+// ADVANCED ANALYTICS FUNCTIONS
+// ============================================================================
+
+// GetAdvancedAnalytics returns comprehensive trading metrics
+func (d *Database) GetAdvancedAnalytics(startDate, endDate string) (map[string]interface{}, error) {
+	result := make(map[string]interface{})
+
+	// Check if we have data
+	var count int
+	err := d.DB.QueryRow(`SELECT COUNT(*) FROM trades WHERE status = 'CLOSED' AND date BETWEEN ? AND ?`,
+		startDate, endDate).Scan(&count)
+	if err != nil {
+		return nil, err
+	}
+	if count == 0 {
+		return map[string]interface{}{"no_data": true}, nil
+	}
+
+	// Get all metrics in one query for efficiency
+	query := `
+		SELECT 
+			COUNT(*) as total_trades,
+			COUNT(CASE WHEN profit_loss > 0 THEN 1 END) as winning_trades,
+			COUNT(CASE WHEN profit_loss < 0 THEN 1 END) as losing_trades,
+			AVG(CASE WHEN profit_loss > 0 THEN profit_loss END) as avg_winner,
+			AVG(CASE WHEN profit_loss < 0 THEN ABS(profit_loss) END) as avg_loser,
+			SUM(CASE WHEN profit_loss > 0 THEN profit_loss ELSE 0 END) as gross_profit,
+			ABS(SUM(CASE WHEN profit_loss < 0 THEN profit_loss ELSE 0 END)) as gross_loss,
+			SUM(profit_loss) as net_profit,
+			SUM(brokerage + other_charges) as total_charges
+		FROM trades
+		WHERE status = 'CLOSED' AND date BETWEEN ? AND ?
+	`
+
+	var totalTrades, winningTrades, losingTrades int
+	var avgWinner, avgLoser, grossProfit, grossLoss, netProfit, totalCharges sql.NullFloat64
+
+	err = d.DB.QueryRow(query, startDate, endDate).Scan(
+		&totalTrades, &winningTrades, &losingTrades,
+		&avgWinner, &avgLoser, &grossProfit, &grossLoss, &netProfit, &totalCharges,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	// Calculate derived metrics
+	winRate := 0.0
+	if totalTrades > 0 {
+		winRate = float64(winningTrades) / float64(totalTrades) * 100
+	}
+
+	riskReward := 0.0
+	if avgLoser.Valid && avgLoser.Float64 > 0 && avgWinner.Valid {
+		riskReward = avgWinner.Float64 / avgLoser.Float64
+	}
+
+	expectancy := 0.0
+	if avgWinner.Valid && avgLoser.Valid && totalTrades > 0 {
+		lossRate := float64(losingTrades) / float64(totalTrades)
+		expectancy = (winRate / 100 * avgWinner.Float64) - (lossRate * avgLoser.Float64)
+	}
+
+	profitFactor := 0.0
+	if grossLoss.Valid && grossLoss.Float64 > 0 && grossProfit.Valid {
+		profitFactor = grossProfit.Float64 / grossLoss.Float64
+	}
+
+	result["total_trades"] = totalTrades
+	result["winning_trades"] = winningTrades
+	result["losing_trades"] = losingTrades
+	result["win_rate"] = winRate
+	result["avg_winner"] = avgWinner.Float64
+	result["avg_loser"] = avgLoser.Float64
+	result["risk_reward"] = riskReward
+	result["expectancy"] = expectancy
+	result["profit_factor"] = profitFactor
+	result["gross_profit"] = grossProfit.Float64
+	result["gross_loss"] = grossLoss.Float64
+	result["net_profit"] = netProfit.Float64
+	result["total_charges"] = totalCharges.Float64
+
+	return result, nil
+}
+
+// GetMonthlyRiskReward returns risk:reward ratio per month
+func (d *Database) GetMonthlyRiskReward(months int) ([]map[string]interface{}, error) {
+	query := `
+		SELECT 
+			strftime('%Y-%m', date) as month,
+			AVG(CASE WHEN profit_loss > 0 THEN profit_loss END) as avg_winner,
+			AVG(CASE WHEN profit_loss < 0 THEN ABS(profit_loss) END) as avg_loser
+		FROM trades
+		WHERE status = 'CLOSED' 
+			AND date >= date('now', '-' || ? || ' months')
+		GROUP BY strftime('%Y-%m', date)
+		ORDER BY month DESC
+	`
+
+	rows, err := d.DB.Query(query, months)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var results []map[string]interface{}
+	for rows.Next() {
+		var month string
+		var avgWinner, avgLoser sql.NullFloat64
+
+		if err := rows.Scan(&month, &avgWinner, &avgLoser); err != nil {
+			continue
+		}
+
+		ratio := 0.0
+		if avgLoser.Valid && avgLoser.Float64 > 0 && avgWinner.Valid {
+			ratio = avgWinner.Float64 / avgLoser.Float64
+		}
+
+		results = append(results, map[string]interface{}{
+			"month":      month,
+			"ratio":      ratio,
+			"avg_winner": avgWinner.Float64,
+			"avg_loser":  avgLoser.Float64,
+		})
+	}
+
+	return results, nil
+}
+
+// GetMonthlyExpectancy returns expectancy per month
+func (d *Database) GetMonthlyExpectancy(months int) ([]map[string]interface{}, error) {
+	query := `
+		SELECT 
+			strftime('%Y-%m', date) as month,
+			COUNT(*) as total_trades,
+			COUNT(CASE WHEN profit_loss > 0 THEN 1 END) as winning_trades,
+			AVG(CASE WHEN profit_loss > 0 THEN profit_loss END) as avg_winner,
+			AVG(CASE WHEN profit_loss < 0 THEN ABS(profit_loss) END) as avg_loser
+		FROM trades
+		WHERE status = 'CLOSED' 
+			AND date >= date('now', '-' || ? || ' months')
+		GROUP BY strftime('%Y-%m', date)
+		ORDER BY month DESC
+	`
+
+	rows, err := d.DB.Query(query, months)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var results []map[string]interface{}
+	for rows.Next() {
+		var month string
+		var totalTrades, winningTrades int
+		var avgWinner, avgLoser sql.NullFloat64
+
+		if err := rows.Scan(&month, &totalTrades, &winningTrades, &avgWinner, &avgLoser); err != nil {
+			continue
+		}
+
+		expectancy := 0.0
+		if totalTrades > 0 && avgWinner.Valid && avgLoser.Valid {
+			winRate := float64(winningTrades) / float64(totalTrades)
+			lossRate := 1.0 - winRate
+			expectancy = (winRate * avgWinner.Float64) - (lossRate * avgLoser.Float64)
+		}
+
+		results = append(results, map[string]interface{}{
+			"month":      month,
+			"expectancy": expectancy,
+		})
+	}
+
+	return results, nil
+}
+
+// GetMonthlyProfitFactor returns profit factor per month
+func (d *Database) GetMonthlyProfitFactor(months int) ([]map[string]interface{}, error) {
+	query := `
+		SELECT 
+			strftime('%Y-%m', date) as month,
+			SUM(CASE WHEN profit_loss > 0 THEN profit_loss ELSE 0 END) as gross_profit,
+			ABS(SUM(CASE WHEN profit_loss < 0 THEN profit_loss ELSE 0 END)) as gross_loss
+		FROM trades
+		WHERE status = 'CLOSED' 
+			AND date >= date('now', '-' || ? || ' months')
+		GROUP BY strftime('%Y-%m', date)
+		ORDER BY month DESC
+	`
+
+	rows, err := d.DB.Query(query, months)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var results []map[string]interface{}
+	for rows.Next() {
+		var month string
+		var grossProfit, grossLoss float64
+
+		if err := rows.Scan(&month, &grossProfit, &grossLoss); err != nil {
+			continue
+		}
+
+		profitFactor := 0.0
+		if grossLoss > 0 {
+			profitFactor = grossProfit / grossLoss
+		}
+
+		results = append(results, map[string]interface{}{
+			"month":         month,
+			"profit_factor": profitFactor,
+			"gross_profit":  grossProfit,
+			"gross_loss":    grossLoss,
+		})
+	}
+
+	return results, nil
+}
+
+// GetEmotionalAnalysis analyzes trades by emotion
+func (d *Database) GetEmotionalAnalysis(startDate, endDate string) ([]map[string]interface{}, error) {
+	query := `
+		SELECT 
+			emotion_before,
+			COUNT(*) as trade_count,
+			COUNT(CASE WHEN profit_loss > 0 THEN 1 END) * 100.0 / COUNT(*) as win_rate,
+			AVG(profit_loss) as avg_pl,
+			SUM(profit_loss) as total_pl
+		FROM trades
+		WHERE status = 'CLOSED'
+			AND emotion_before IS NOT NULL
+			AND emotion_before != ''
+			AND date BETWEEN ? AND ?
+		GROUP BY emotion_before
+		ORDER BY avg_pl DESC
+	`
+
+	rows, err := d.DB.Query(query, startDate, endDate)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var results []map[string]interface{}
+	for rows.Next() {
+		var emotion string
+		var tradeCount int
+		var winRate, avgPL, totalPL float64
+
+		if err := rows.Scan(&emotion, &tradeCount, &winRate, &avgPL, &totalPL); err != nil {
+			continue
+		}
+
+		results = append(results, map[string]interface{}{
+			"emotion":     emotion,
+			"trade_count": tradeCount,
+			"win_rate":    winRate,
+			"avg_pl":      avgPL,
+			"total_pl":    totalPL,
+		})
+	}
+
+	return results, nil
+}
+
+// GetMistakeAnalysis parses notes for common mistakes
+func (d *Database) GetMistakeAnalysis(startDate, endDate string) ([]map[string]interface{}, error) {
+	query := `
+		SELECT 
+			CASE 
+				WHEN LOWER(notes) LIKE '%mobile%' OR LOWER(notes) LIKE '%phone%' THEN 'Mobile Trading'
+				WHEN LOWER(notes) LIKE '%trial%' OR LOWER(notes) LIKE '%testing%' THEN 'Trial/Testing'
+				WHEN LOWER(notes) LIKE '%no plan%' OR LOWER(notes) LIKE '%unplanned%' THEN 'No Planning'
+				WHEN LOWER(notes) LIKE '%revenge%' OR LOWER(notes) LIKE '%emotional%' THEN 'Revenge Trading'
+				WHEN LOWER(notes) LIKE '%late entry%' OR LOWER(notes) LIKE '%missed%' THEN 'Late Entry'
+				WHEN LOWER(notes) LIKE '%overtrading%' THEN 'Overtrading'
+				WHEN LOWER(notes) LIKE '%fomo%' THEN 'FOMO'
+				WHEN LOWER(notes) LIKE '%greed%' THEN 'Greed'
+			END as mistake_type,
+			COUNT(*) as frequency,
+			SUM(CASE WHEN profit_loss < 0 THEN ABS(profit_loss) ELSE 0 END) as total_loss,
+			AVG(CASE WHEN profit_loss < 0 THEN ABS(profit_loss) ELSE 0 END) as avg_loss,
+			SUM(profit_loss) as net_impact
+		FROM trades
+		WHERE status = 'CLOSED'
+			AND notes IS NOT NULL
+			AND notes != ''
+			AND date BETWEEN ? AND ?
+		GROUP BY mistake_type
+		HAVING mistake_type IS NOT NULL
+		ORDER BY total_loss DESC
+		LIMIT 10
+	`
+
+	rows, err := d.DB.Query(query, startDate, endDate)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var results []map[string]interface{}
+	for rows.Next() {
+		var mistakeType string
+		var frequency int
+		var totalLoss, avgLoss, netImpact float64
+
+		if err := rows.Scan(&mistakeType, &frequency, &totalLoss, &avgLoss, &netImpact); err != nil {
+			continue
+		}
+
+		results = append(results, map[string]interface{}{
+			"mistake":    mistakeType,
+			"frequency":  frequency,
+			"total_loss": totalLoss,
+			"avg_loss":   avgLoss,
+			"net_impact": netImpact,
+		})
+	}
+
+	return results, nil
+}
+
+// GetChargesImpact returns gross profit, charges, and net profit over time
+func (d *Database) GetChargesImpact(days int) ([]map[string]interface{}, error) {
+	query := `
+		SELECT 
+			DATE(date) as trade_date,
+			SUM(CASE WHEN profit_loss > 0 THEN profit_loss ELSE 0 END) as gross_profit,
+			SUM(brokerage + other_charges) as total_charges,
+			SUM(profit_loss) as net_profit
+		FROM trades
+		WHERE status = 'CLOSED'
+			AND date >= date('now', '-' || ? || ' days')
+		GROUP BY DATE(date)
+		ORDER BY trade_date ASC
+	`
+
+	rows, err := d.DB.Query(query, days)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var results []map[string]interface{}
+	for rows.Next() {
+		var tradeDate string
+		var grossProfit, totalCharges, netProfit float64
+
+		if err := rows.Scan(&tradeDate, &grossProfit, &totalCharges, &netProfit); err != nil {
+			continue
+		}
+
+		results = append(results, map[string]interface{}{
+			"date":          tradeDate,
+			"gross_profit":  grossProfit,
+			"total_charges": totalCharges,
+			"net_profit":    netProfit,
+		})
+	}
+
+	return results, nil
+}
+
+// GetHoldingTimeAnalysis analyzes performance by holding period
+func (d *Database) GetHoldingTimeAnalysis(startDate, endDate string) ([]map[string]interface{}, error) {
+	query := `
+		SELECT 
+			CASE 
+				WHEN julianday(date) - julianday(created_at) < 1 THEN 'Intraday'
+				WHEN julianday(date) - julianday(created_at) <= 7 THEN 'Short-term (1-7 days)'
+				WHEN julianday(date) - julianday(created_at) <= 30 THEN 'Medium-term (8-30 days)'
+				ELSE 'Long-term (>30 days)'
+			END as holding_period,
+			COUNT(*) as trade_count,
+			COUNT(CASE WHEN profit_loss > 0 THEN 1 END) * 100.0 / COUNT(*) as win_rate,
+			AVG(CASE WHEN profit_loss > 0 THEN profit_loss END) as avg_winner,
+			AVG(CASE WHEN profit_loss < 0 THEN ABS(profit_loss) END) as avg_loser,
+			AVG(profit_loss) as avg_pl
+		FROM trades
+		WHERE status = 'CLOSED'
+			AND date BETWEEN ? AND ?
+		GROUP BY holding_period
+		ORDER BY 
+			CASE holding_period
+				WHEN 'Intraday' THEN 1
+				WHEN 'Short-term (1-7 days)' THEN 2
+				WHEN 'Medium-term (8-30 days)' THEN 3
+				ELSE 4
+			END
+	`
+
+	rows, err := d.DB.Query(query, startDate, endDate)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var results []map[string]interface{}
+	for rows.Next() {
+		var holdingPeriod string
+		var tradeCount int
+		var winRate, avgWinner, avgLoser, avgPL sql.NullFloat64
+
+		if err := rows.Scan(&holdingPeriod, &tradeCount, &winRate, &avgWinner, &avgLoser, &avgPL); err != nil {
+			continue
+		}
+
+		results = append(results, map[string]interface{}{
+			"period":      holdingPeriod,
+			"trade_count": tradeCount,
+			"win_rate":    winRate.Float64,
+			"avg_winner":  avgWinner.Float64,
+			"avg_loser":   avgLoser.Float64,
+			"avg_pl":      avgPL.Float64,
+		})
+	}
+
+	return results, nil
+}
+
+// GetMobileVsDesktopPerformance compares mobile vs desktop trading
+func (d *Database) GetMobileVsDesktopPerformance(startDate, endDate string) (map[string]interface{}, error) {
+	query := `
+		SELECT 
+			CASE 
+				WHEN LOWER(notes) LIKE '%mobile%' OR LOWER(notes) LIKE '%phone%' THEN 'Mobile'
+				ELSE 'Desktop'
+			END as platform,
+			COUNT(*) as trade_count,
+			COUNT(CASE WHEN profit_loss > 0 THEN 1 END) * 100.0 / COUNT(*) as win_rate,
+			SUM(profit_loss) as net_pl,
+			AVG(profit_loss) as avg_pl
+		FROM trades
+		WHERE status = 'CLOSED'
+			AND date BETWEEN ? AND ?
+		GROUP BY platform
+	`
+
+	rows, err := d.DB.Query(query, startDate, endDate)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	result := make(map[string]interface{})
+	for rows.Next() {
+		var platform string
+		var tradeCount int
+		var winRate, netPL, avgPL float64
+
+		if err := rows.Scan(&platform, &tradeCount, &winRate, &netPL, &avgPL); err != nil {
+			continue
+		}
+
+		result[platform] = map[string]interface{}{
+			"trade_count": tradeCount,
+			"win_rate":    winRate,
+			"net_pl":      netPL,
+			"avg_pl":      avgPL,
+		}
+	}
+
+	return result, nil
+}
+
+// Made with Bob

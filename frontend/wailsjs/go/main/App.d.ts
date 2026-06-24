@@ -38,11 +38,15 @@ export function DeleteTask(arg1:number):Promise<void>;
 
 export function DeleteTrade(arg1:number):Promise<void>;
 
+export function GetAdvancedAnalytics(arg1:string,arg2:string):Promise<Record<string, any>>;
+
 export function GetAllBrokerConfigs():Promise<Array<database.BrokerConfig>>;
 
 export function GetBrokerConfig(arg1:string):Promise<database.BrokerConfig>;
 
 export function GetCapitalTransactions(arg1:number):Promise<Array<database.CapitalTransaction>>;
+
+export function GetChargesImpactData(arg1:number):Promise<Array<Record<string, any>>>;
 
 export function GetChecklistItems(arg1:string):Promise<Array<database.ChecklistItem>>;
 
@@ -50,11 +54,21 @@ export function GetCurrentCapitalBalance():Promise<number>;
 
 export function GetDailyPLData(arg1:number):Promise<Array<Record<string, any>>>;
 
+export function GetEmotionalAnalysis(arg1:string,arg2:string):Promise<Array<Record<string, any>>>;
+
+export function GetExpectancyTrend(arg1:number):Promise<Array<Record<string, any>>>;
+
 export function GetGoals():Promise<Array<database.Goal>>;
+
+export function GetHoldingTimeAnalysis(arg1:string,arg2:string):Promise<Array<Record<string, any>>>;
 
 export function GetIndianMarketNews():Promise<Array<main.NewsArticle>>;
 
 export function GetMarketQuoteWithAnalyticsToken(arg1:string,arg2:string):Promise<broker.MarketQuote>;
+
+export function GetMistakeAnalysis(arg1:string,arg2:string):Promise<Array<Record<string, any>>>;
+
+export function GetMobileVsDesktopStats(arg1:string,arg2:string):Promise<Record<string, any>>;
 
 export function GetMonthlyPLData(arg1:number):Promise<Array<Record<string, any>>>;
 
@@ -66,7 +80,11 @@ export function GetPerTradePLData(arg1:number):Promise<Array<Record<string, any>
 
 export function GetPortfolioWithAnalyticsToken():Promise<Array<broker.Position>>;
 
+export function GetProfitFactorTrend(arg1:number):Promise<Array<Record<string, any>>>;
+
 export function GetRecentLogs(arg1:number):Promise<Array<Record<string, any>>>;
+
+export function GetRiskRewardTrend(arg1:number):Promise<Array<Record<string, any>>>;
 
 export function GetSyncedTrades(arg1:number,arg2:number):Promise<Array<database.SyncedTrade>>;
 
