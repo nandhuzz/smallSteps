@@ -70,6 +70,10 @@ export function DeleteTrade(arg1) {
   return window['go']['main']['App']['DeleteTrade'](arg1);
 }
 
+export function GetAdvancedAnalytics(arg1, arg2) {
+  return window['go']['main']['App']['GetAdvancedAnalytics'](arg1, arg2);
+}
+
 export function GetAllBrokerConfigs() {
   return window['go']['main']['App']['GetAllBrokerConfigs']();
 }
@@ -80,6 +84,10 @@ export function GetBrokerConfig(arg1) {
 
 export function GetCapitalTransactions(arg1) {
   return window['go']['main']['App']['GetCapitalTransactions'](arg1);
+}
+
+export function GetChargesImpactData(arg1) {
+  return window['go']['main']['App']['GetChargesImpactData'](arg1);
 }
 
 export function GetChecklistItems(arg1) {
@@ -94,8 +102,20 @@ export function GetDailyPLData(arg1) {
   return window['go']['main']['App']['GetDailyPLData'](arg1);
 }
 
+export function GetEmotionalAnalysis(arg1, arg2) {
+  return window['go']['main']['App']['GetEmotionalAnalysis'](arg1, arg2);
+}
+
+export function GetExpectancyTrend(arg1) {
+  return window['go']['main']['App']['GetExpectancyTrend'](arg1);
+}
+
 export function GetGoals() {
   return window['go']['main']['App']['GetGoals']();
+}
+
+export function GetHoldingTimeAnalysis(arg1, arg2) {
+  return window['go']['main']['App']['GetHoldingTimeAnalysis'](arg1, arg2);
 }
 
 export function GetIndianMarketNews() {
@@ -104,6 +124,14 @@ export function GetIndianMarketNews() {
 
 export function GetMarketQuoteWithAnalyticsToken(arg1, arg2) {
   return window['go']['main']['App']['GetMarketQuoteWithAnalyticsToken'](arg1, arg2);
+}
+
+export function GetMistakeAnalysis(arg1, arg2) {
+  return window['go']['main']['App']['GetMistakeAnalysis'](arg1, arg2);
+}
+
+export function GetMobileVsDesktopStats(arg1, arg2) {
+  return window['go']['main']['App']['GetMobileVsDesktopStats'](arg1, arg2);
 }
 
 export function GetMonthlyPLData(arg1) {
@@ -126,8 +154,16 @@ export function GetPortfolioWithAnalyticsToken() {
   return window['go']['main']['App']['GetPortfolioWithAnalyticsToken']();
 }
 
+export function GetProfitFactorTrend(arg1) {
+  return window['go']['main']['App']['GetProfitFactorTrend'](arg1);
+}
+
 export function GetRecentLogs(arg1) {
   return window['go']['main']['App']['GetRecentLogs'](arg1);
+}
+
+export function GetRiskRewardTrend(arg1) {
+  return window['go']['main']['App']['GetRiskRewardTrend'](arg1);
 }
 
 export function GetSyncedTrades(arg1, arg2) {

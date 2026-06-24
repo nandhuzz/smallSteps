@@ -4,6 +4,7 @@ import { useState, useEffect } from 'preact/hooks';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { GetTodayTrades, GetMonthlyStats, GetDailyPLData, GetWeeklyPLData, GetMonthlyPLData, GetPerTradePLData } from '../../../wailsjs/go/main/App';
 import { database } from '../../../wailsjs/go/models';
+import AdvancedAnalytics from './AdvancedAnalytics';
 import './Dashboard.css';
 
 type Trade = database.Trade;
@@ -306,6 +307,9 @@ const Dashboard = () => {
                     )}
                 </div>
             </div>
+
+            {/* Advanced Analytics Section */}
+            <AdvancedAnalytics />
         </div>
     );
 };

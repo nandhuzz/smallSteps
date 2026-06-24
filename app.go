@@ -970,4 +970,53 @@ func (a *App) UpdateTradingSettingsWithProtection(maxTradesPerDay int, maxLossPe
 	return a.db.UpdateTradingSettings(settings)
 }
 
+// ============================================================================
+// ADVANCED ANALYTICS API METHODS
+// ============================================================================
+
+// GetAdvancedAnalytics returns all advanced metrics
+func (a *App) GetAdvancedAnalytics(startDate, endDate string) (map[string]interface{}, error) {
+	return a.db.GetAdvancedAnalytics(startDate, endDate)
+}
+
+// GetRiskRewardTrend returns monthly risk:reward ratios
+func (a *App) GetRiskRewardTrend(months int) ([]map[string]interface{}, error) {
+	return a.db.GetMonthlyRiskReward(months)
+}
+
+// GetExpectancyTrend returns monthly expectancy values
+func (a *App) GetExpectancyTrend(months int) ([]map[string]interface{}, error) {
+	return a.db.GetMonthlyExpectancy(months)
+}
+
+// GetProfitFactorTrend returns monthly profit factors
+func (a *App) GetProfitFactorTrend(months int) ([]map[string]interface{}, error) {
+	return a.db.GetMonthlyProfitFactor(months)
+}
+
+// GetEmotionalAnalysis returns emotion-based performance
+func (a *App) GetEmotionalAnalysis(startDate, endDate string) ([]map[string]interface{}, error) {
+	return a.db.GetEmotionalAnalysis(startDate, endDate)
+}
+
+// GetMistakeAnalysis returns common mistakes from notes
+func (a *App) GetMistakeAnalysis(startDate, endDate string) ([]map[string]interface{}, error) {
+	return a.db.GetMistakeAnalysis(startDate, endDate)
+}
+
+// GetChargesImpactData returns charges impact over time
+func (a *App) GetChargesImpactData(days int) ([]map[string]interface{}, error) {
+	return a.db.GetChargesImpact(days)
+}
+
+// GetHoldingTimeAnalysis returns performance by holding period
+func (a *App) GetHoldingTimeAnalysis(startDate, endDate string) ([]map[string]interface{}, error) {
+	return a.db.GetHoldingTimeAnalysis(startDate, endDate)
+}
+
+// GetMobileVsDesktopStats returns mobile vs desktop comparison
+func (a *App) GetMobileVsDesktopStats(startDate, endDate string) (map[string]interface{}, error) {
+	return a.db.GetMobileVsDesktopPerformance(startDate, endDate)
+}
+
 // Made with Bob
