@@ -165,10 +165,10 @@
 .trade-item {
     display: flex;
     align-items: center;
-    justify-content: space-between;
     padding: 12px;
     border-bottom: 1px solid var(--border-color);
     transition: background 0.2s;
+    justify-content: space-between;
 }
 
 .trade-item:hover {
@@ -180,9 +180,8 @@
 }
 
 .trade-symbol {
-    font-weight: 600;
+    font-weight: 500;
     color: var(--text-primary);
-    flex: 1;
 }
 
 .trade-type {
@@ -194,12 +193,12 @@
     margin: 0 10px;
 }
 
-.trade-type.buy {
+.trade-type.call {
     background: #e8f5e9;
     color: #2e7d32;
 }
 
-.trade-type.sell {
+.trade-type.put {
     background: #ffebee;
     color: #c62828;
 }
@@ -207,7 +206,18 @@
 .trade-pl {
     font-weight: 600;
     margin: 0 10px;
+    width: 40%;
+    text-align: end;
 }
+
+.trade-pl.positive {
+    color: #4CAF50;
+}
+
+.trade-pl.negative {
+    color: #f44336;
+}
+
 
 .trade-status {
     padding: 4px 12px;

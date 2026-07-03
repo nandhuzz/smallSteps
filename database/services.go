@@ -1481,9 +1481,9 @@ func (d *Database) GetChargesImpact(days int) ([]map[string]interface{}, error) 
 
 		results = append(results, map[string]interface{}{
 			"date":          tradeDate,
-			"gross_profit":  grossProfit,
-			"total_charges": totalCharges,
-			"net_profit":    netProfit,
+			"gross_profit":  round2(grossProfit),
+			"total_charges": round2(totalCharges),
+			"net_profit":    round2(netProfit),
 		})
 	}
 

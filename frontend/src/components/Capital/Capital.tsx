@@ -54,10 +54,10 @@ const Capital = () => {
             return;
         }
 
-        if (transactionType === 'WITHDRAWAL' && amountNum > currentBalance) {
-            setError('Insufficient balance for withdrawal');
-            return;
-        }
+        // if (transactionType === 'WITHDRAWAL' && amountNum > currentBalance) {
+        //     setError('Insufficient balance for withdrawal');
+        //     return;
+        // }
 
         setSubmitting(true);
         try {
@@ -120,7 +120,7 @@ const Capital = () => {
             )}
 
             <div className="capital-summary">
-                <div className="balance-card">
+                <div className={`balance-card ${(currentBalance || 0) <= 0 ? 'profit' : 'loss'}`}>
                     <h2>Current Balance</h2>
                     <p className="balance-amount">₹{currentBalance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                 </div>

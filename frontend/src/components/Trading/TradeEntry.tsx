@@ -45,18 +45,20 @@ interface OpenTrade {
 
 const SYMBOLS = ['NIFTY', 'BANKNIFTY', 'SENSEX', 'FINNIFTY', 'MIDCPNIFTY'];
 
+const DefaultCharge = 40;
+
 const TradeEntry = () => {
     const [formData, setFormData] = useState<TradeFormData>({
         symbol: '',
         tradeType: 'BUY',
-        instrumentType: 'EQUITY',
+        instrumentType: 'OPTIONS',
         optionType: 'CALL',
         strikePrice: 0,
         expiryDate: '',
         quantity: 0,
         entryPrice: 0,
-        brokerage: 0,
-        otherCharges: 0,
+        brokerage: DefaultCharge,
+        otherCharges: DefaultCharge,
         notes: '',
         emotionBefore: 'Calm'
     });
@@ -169,14 +171,14 @@ const TradeEntry = () => {
             setFormData({
                 symbol: '',
                 tradeType: 'BUY',
-                instrumentType: 'EQUITY',
+                instrumentType: 'OPTIONS',
                 optionType: 'CALL',
                 strikePrice: 0,
                 expiryDate: '',
                 quantity: 0,
                 entryPrice: 0,
-                brokerage: 0,
-                otherCharges: 0,
+                brokerage: DefaultCharge,
+                otherCharges: DefaultCharge,
                 notes: '',
                 emotionBefore: 'Calm'
             });

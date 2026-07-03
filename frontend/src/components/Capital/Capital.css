@@ -6,11 +6,15 @@
 }
 
 .balance-card {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #bd2116 0%, #fd5202 100%);
     color: white;
     padding: 32px;
     border-radius: 12px;
     box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.balance-card.profit {
+    background: linear-gradient(135deg, #1e6608 0%, #2fd80d 100%);
 }
 
 .balance-card h2 {
@@ -100,12 +104,12 @@
     box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
 }
 
-.transaction-item.deposit {
+.transaction-item.withdrawal {
     background: linear-gradient(to right, #d4edda 0%, #ffffff 100%);
     border-color: #28a745;
 }
 
-.transaction-item.withdrawal {
+.transaction-item.deposit {
     background: linear-gradient(to right, #f8d7da 0%, #ffffff 100%);
     border-color: #dc3545;
 }
@@ -155,11 +159,11 @@
     margin-bottom: 4px;
 }
 
-.transaction-amount.deposit {
+.transaction-amount.withdrawal {
     color: #28a745;
 }
 
-.transaction-amount.withdrawal {
+.transaction-amount.deposit {
     color: #dc3545;
 }
 

@@ -179,7 +179,7 @@ const AdvancedAnalytics = () => {
 
   const DateFilter = () => {
     const dateFilters = [
-      { label: "Today", value: "today" },
+      // { label: "Today", value: "today" },
       { label: "Week", value: "week" },
       { label: "Month", value: "month" },
       { label: "Quarter", value: "quarter" },
@@ -407,9 +407,11 @@ const AdvancedAnalytics = () => {
                 {/* @ts-ignore */}
                 <Legend />
                 {/* @ts-ignore */}
-                <Area type="monotone" dataKey="gross_profit" stackId="1" stroke="#4CAF50" fill="#4CAF50" name="Gross Profit" />
+                <Area type="monotone" dataKey="net_profit" stackId="1" stroke="#054e07" fill="#046b07" name="Net Profit" />
                 {/* @ts-ignore */}
-                <Area type="monotone" dataKey="total_charges" stackId="1" stroke="#FF9800" fill="#FF9800" name="Charges" />
+                <Area type="monotone" dataKey="total_charges" stackId="3" stroke="#FF9800" fill="#FF9800" name="Charges" />
+                  {/* @ts-ignore */}
+                <Area type="monotone" dataKey="gross_profit" stackId="2" stroke="#00a2ff" fill="#1fcbd1" name="Gross Profit" />
               </AreaChart>
             </ResponsiveContainer>
           </div>

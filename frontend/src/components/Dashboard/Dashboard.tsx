@@ -290,15 +290,15 @@ const Dashboard = () => {
                             {todayTrades.map(trade => (
                                 <div key={trade.id} className="trade-item">
                                     <span className="trade-symbol">{trade.symbol}</span>
-                                    <span className={`trade-type ${trade.trade_type.toLowerCase()}`}>
-                                        {trade.trade_type}
+                                    <span className={`trade-type ${trade.option_type?.toLowerCase()}`}>
+                                        {trade.strike_price}
                                     </span>
                                     <span className={`trade-pl ${(trade.profit_loss || 0) >= 0 ? 'positive' : 'negative'}`}>
                                         ₹{(trade.profit_loss || 0).toFixed(2)}
                                     </span>
-                                    <span className={`trade-status ${trade.status.toLowerCase()}`}>
+                                    {/* <span className={`trade-status ${trade.status.toLowerCase()}`}>
                                         {trade.status}
-                                    </span>
+                                    </span> */}
                                 </div>
                             ))}
                         </div>
